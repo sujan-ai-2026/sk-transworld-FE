@@ -42,7 +42,7 @@ export function migrateStoredState(value: Partial<AppState>): AppState {
   }))
   migrated.trips = migrated.trips.map((trip) => {
     const storedStatus = String(trip.status)
-    const status = storedStatus === 'delivered' ? 'completed' : storedStatus === 'at-port' || storedStatus === 'In-Transit' ? 'in-progress' : trip.status
+    const status = storedStatus === 'Delivered' ? 'completed' : storedStatus === 'at-port' || storedStatus === 'In-Transit' ? 'in-progress' : trip.status
     return {
       ...trip,
       status,

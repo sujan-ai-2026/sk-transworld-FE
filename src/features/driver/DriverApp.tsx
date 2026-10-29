@@ -92,7 +92,7 @@ export function DriverApp({ navigate }: { navigate: (path: string) => void }) {
     dispatch({ type: 'update-trip', trip: updated })
     const currentStage = updated.driverMilestones?.at(-1)
     if (currentStage?.key === 'laden-delivery' && container) {
-      dispatch({ type: 'update-container', container: { ...container, movementStatus: 'delivered' } })
+      dispatch({ type: 'update-container', container: { ...container, movementStatus: 'Delivered' } })
     }
     if (currentStage?.key === 'return-empty' && container) {
       dispatch({ type: 'update-container', container: { ...container, movementStatus: 'empty-returned' } })
@@ -235,7 +235,7 @@ export function DriverApp({ navigate }: { navigate: (path: string) => void }) {
       ? state.shipments.find((item) => item.id === selected.shipmentId && item.jobId === selected.jobId)
       : state.shipments.find((item) => item.jobId === selected.jobId)
     if (shipment) {
-      dispatch({ type: 'update-shipment', shipment: { ...shipment, status: 'delivered' } })
+      dispatch({ type: 'update-shipment', shipment: { ...shipment, status: 'Delivered' } })
       dispatch({ type: 'add-shipment-milestone', milestone: {
         id: generateRecordId(state, 'shipmentMilestones'),
         shipmentId: shipment.id,

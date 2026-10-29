@@ -7,7 +7,7 @@ import { generateJobNumber, generateRecordId, generateStableId } from '../../ser
 import { useAppState } from '../../state/AppContext.tsx'
 import './CustomerPortal.css'
 
-const shipmentTone = (value: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' => value === 'delivered' ? 'success' : value === 'delayed' ? 'danger' : 'info'
+const shipmentTone = (value: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' => value === 'Delivered' ? 'success' : value === 'delayed' ? 'danger' : 'info'
 const invoiceTone = (value: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' => value === 'paid' ? 'success' : value === 'rejected' ? 'danger' : value === 'pending-approval' || value === 'draft' ? 'warning' : 'info'
 const requestTone = (value: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' => value === 'accepted' || value === 'converted' ? 'success' : value === 'rejected' ? 'danger' : value === 'quoted' ? 'info' : 'warning'
 const formatMoney = (value: number) => `RM ${value.toLocaleString('en-MY', { maximumFractionDigits: 2 })}`
@@ -153,7 +153,7 @@ export function CustomerPortal({ navigate }: { navigate: (path: string) => void 
   const shipments = customerShipments.filter((shipment) => (
     `${shipment.reference} ${shipment.origin} ${shipment.destination}`.toLowerCase().includes(query.toLowerCase())
   ))
-  const activeShipments = customerShipments.filter((shipment) => shipment.status !== 'delivered')
+  const activeShipments = customerShipments.filter((shipment) => shipment.status !== 'Delivered')
   const nextShipment = [...activeShipments].sort((a, b) => a.eta.localeCompare(b.eta))[0] ?? customerShipments[0]
   const documents = state.documents
     .filter((document) => jobIds.has(document.jobId) && ['customer-visible', undefined].includes(document.accessRule))
@@ -180,7 +180,7 @@ export function CustomerPortal({ navigate }: { navigate: (path: string) => void 
     ? state.trips
       .filter((trip) => trip.jobId === selected.jobId && !milestoneTripIds.has(trip.id))
       .flatMap((trip) => trip.milestones
-        .filter((milestone) => /^(at-port|In-Transit|delivered|arrived at port)\b/i.test(milestone))
+        .filter((milestone) => /^(at-port|In-Transit|Delivered|arrived at port)\b/i.test(milestone))
         .map((milestone) => `${trip.tripNumber} · ${milestone}`))
     : []
   const milestones = selected
@@ -292,7 +292,7 @@ export function CustomerPortal({ navigate }: { navigate: (path: string) => void 
     <div className="standalone-portal customer-portal">
       <header className="standalone-topbar customer-topbar">
         <div className="brand">
-          <img src="/sk-logo.png" alt="SK Transworld Logo" className="brand-mark" />
+          {/* <img src="/sk-logo.png" alt="SK Transworld Logo" className="brand-mark" /> */}
           <div className="brand-copy"><strong>SK Transworld</strong><small>Customer Portal</small></div>
         </div>
         <div className="standalone-actions customer-topbar__actions">

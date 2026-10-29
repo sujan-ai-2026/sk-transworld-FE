@@ -31,7 +31,7 @@ export interface Job {
   id: string; jobNumber: string; customerId: string; quotationId?: string; quotationRequestId?: string; serviceType: ServiceType; status: 'open' | 'in-progress' | 'on-hold' | 'completed' | 'cancelled'; owner: string; openedDate: string
 }
 export interface Shipment {
-  id: string; jobId: string; reference: string; mode: 'FCL' | 'LCL' | 'air'; direction: 'import' | 'export'; origin: string; destination: string; eta: string; status: 'Booked' | 'In-Transit' | 'delivered' | 'delayed'
+  id: string; jobId: string; reference: string; mode: 'FCL' | 'LCL' | 'air'; direction: 'import' | 'export'; origin: string; destination: string; eta: string; status: 'Booked' | 'In-Transit' | 'Delivered' | 'delayed'
   etd?: string; vessel?: string; voyage?: string; containerType?: '20ft' | '40ft' | '40ft HC'
   cargoDescription?: string; cartons?: number; pallets?: number; cbm?: number; weightKg?: number; containerQuantity?: number
   blReference?: string; hblReference?: string; mblReference?: string; pickupRequirements?: string; deliveryRequirements?: string
@@ -41,9 +41,9 @@ export interface ForwardingRecord {
   id: string; jobId: string; bookingReference: string; shipmentId: string; customerId: string; mode: 'FCL' | 'LCL'; direction: 'import' | 'export'; transshipment: boolean; carrier: string; vessel: string; voyage: string; etd: string; eta: string; mbl?: string; hbl?: string; bl?: string; freeDays: number; demurrageRate: number; detentionRate: number; milestones: string[]
 }
 export interface Container {
-  id: string; containerNumber: string; jobId: string; shipmentId: string; size: '20ft' | '40ft' | '40ft HC'; vessel: string; voyage: string; port: string; eta: string; freeDays: number; freeTimeExpiryDate?: string; movementStatus: 'Booked' | 'at-port' | 'delivered' | 'empty-returned'
+  id: string; containerNumber: string; jobId: string; shipmentId: string; size: '20ft' | '40ft' | '40ft HC'; vessel: string; voyage: string; port: string; eta: string; freeDays: number; freeTimeExpiryDate?: string; movementStatus: 'Booked' | 'at-port' | 'Delivered' | 'empty-returned'
 }
-export interface ContainerEvent { id: string; containerId: string; status: 'Booked' | 'gate-in' | 'loaded' | 'discharged' | 'at-port' | 'delivered' | 'empty-returned'; location: string; occurredAt: string; note: string }
+export interface ContainerEvent { id: string; containerId: string; status: 'Booked' | 'gate-in' | 'loaded' | 'discharged' | 'at-port' | 'Delivered' | 'empty-returned'; location: string; occurredAt: string; note: string }
 export interface CustomsRecord {
   id: string; jobId: string; declarationType: 'K1' | 'K2' | 'K3' | 'K4' | 'K5' | 'K8' | 'ZB'; status: 'draft' | 'submitted' | 'inspection' | 'approved' | 'released'; dutyAndSst: number; edoStatus: 'pending' | 'received' | 'released'; dutyStatus?: 'unpaid' | 'paid'; inspectionResult?: 'pending' | 'passed' | 'hold'; missingDocuments?: string[]; history?: string[]
 }
@@ -98,6 +98,11 @@ export interface WarehouseInbound {
   id: string; jobId: string; containerId?: string; reference: string; status: 'received' | 'cancelled'
   receivedAt: string; transactionId: string; inventoryId: string
   expectedQuantity?: number; countedQuantity?: number; discrepancyNote?: string
+  items?: WarehouseInboundItem[]
+}
+export interface WarehouseInboundItem {
+  inventoryId: string; transactionId: string; sku: string; unit: 'carton' | 'pallet' | 'CBM'
+  expectedQuantity?: number; countedQuantity: number; palletisedQuantity?: number; discrepancyNote?: string
 }
 export interface GoodsReceivedNote {
   id: string; warehouseInboundId: string; jobId: string; grnNumber: string; receivedAt: string
@@ -105,7 +110,7 @@ export interface GoodsReceivedNote {
 }
 export interface OutboundOrder {
   id: string; jobId: string; inventoryId: string; deliveryOrderNumber: string; quantity: number
-  unit: 'carton' | 'pallet' | 'CBM'; status: 'open' | 'picking' | 'picked' | 'packed' | 'loading' | 'loaded' | 'dispatched' | 'In-Transit' | 'partial' | 'delivered' | 'verified' | 'cancelled'
+  unit: 'carton' | 'pallet' | 'CBM'; status: 'open' | 'picking' | 'picked' | 'packed' | 'loading' | 'loaded' | 'dispatched' | 'In-Transit' | 'partial' | 'Delivered' | 'verified' | 'cancelled'
   createdAt: string; deliveryDate?: string; batchLot?: string; shipmentId?: string; containerId?: string
   pickedQuantity?: number; packedQuantity?: number; loadedQuantity?: number; dispatchedQuantity?: number
   assignedTripId?: string

@@ -1,0 +1,61 @@
+.reports-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0 0 17px;
+}
+
+.reports-chart-card {
+  min-width: 0;
+}
+
+.reports-chart-card h2 {
+  margin: 0 0 16px;
+}
+
+.reports-chart-card--wide {
+  grid-column: 1 / -1;
+}
+
+.reports-chart {
+  position: relative;
+  min-width: 0;
+  height: 260px;
+}
+
+.reports-chart--doughnut {
+  max-width: 390px;
+  margin: 0 auto;
+}
+
+.reports-chart--profit {
+  min-height: 220px;
+}
+
+.reports-chart-empty {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 960px) {
+  .reports-chart-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reports-chart-card--wide {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .reports-chart {
+    height: 230px;
+  }
+
+  .reports-chart--profit {
+    height: 260px;
+  }
+}

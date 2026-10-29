@@ -117,7 +117,7 @@ describe('warehouse outbound workflow', () => {
         milestones: [...inProgress.milestones, `Laden Delivery · ${ladenAt}`],
         driverMilestones: [...(inProgress.driverMilestones ?? []), { key: 'laden-delivery', label: 'Laden Delivery', occurredAt: ladenAt }],
       })
-      const delivered = state.trips.find((item) => item.id === tripId)!
+      const Delivered = state.trips.find((item) => item.id === tripId)!
       const podReceivedAt = `${date}T16:30:00Z`
       const podDocument = {
         id: generateRecordId(state, 'documents'), jobId: order.jobId, name: `${tripNumber}-pod.jpg`, category: 'pod' as const,
@@ -126,9 +126,9 @@ describe('warehouse outbound workflow', () => {
       }
       state = { ...state, documents: [...state.documents, podDocument] }
       updateTrip({
-        ...delivered, podStatus: 'received', podReceiverName: 'Apex receiving', podSignatureCaptured: true,
+        ...Delivered, podStatus: 'received', podReceiverName: 'Apex receiving', podSignatureCaptured: true,
         podPhotoName: podDocument.name, podReceivedAt,
-        driverMilestones: [...(delivered.driverMilestones ?? []), { key: 'pod', label: 'POD', occurredAt: podReceivedAt }],
+        driverMilestones: [...(Delivered.driverMilestones ?? []), { key: 'pod', label: 'POD', occurredAt: podReceivedAt }],
       })
       const withPod = state.trips.find((item) => item.id === tripId)!
       const completedAt = `${date}T17:00:00Z`

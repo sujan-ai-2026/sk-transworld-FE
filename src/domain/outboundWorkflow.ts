@@ -118,7 +118,7 @@ export function applyOutboundTripUpdate(state: AppState, trip: Trip): TripMutati
       ...nextState,
       outboundOrders: state.outboundOrders.map((item) => item.id === order.id ? {
         ...item,
-        status: trip.podStatus === 'received' ? 'delivered' : trip.status === 'completed' ? 'delivered' : trip.status === 'in-progress' ? 'In-Transit' : item.status,
+        status: trip.podStatus === 'received' ? 'Delivered' : trip.status === 'completed' ? 'Delivered' : trip.status === 'in-progress' ? 'In-Transit' : item.status,
         podStatus: trip.podStatus === 'received' ? 'received' : item.podStatus,
       } : item),
     },

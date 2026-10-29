@@ -9,7 +9,7 @@ import { generateRecordId, generateStableId } from '../../services/mockDataServi
 import { canTransitionTrip, tripAvailability, validateTripPlan } from '../../domain/tripPlanning.ts'
 import './TripDetail.css'
 
-const tone = (value: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' => ['delivered', 'completed', 'released', 'approved', 'empty-returned'].includes(value) ? 'success' : ['inspection', 'at-port', 'In-Transit', 'in-progress', 'pending', 'submitted'].includes(value) ? 'warning' : ['cancelled', 'hold'].includes(value) ? 'danger' : 'info'
+const tone = (value: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' => ['Delivered', 'completed', 'released', 'approved', 'empty-returned'].includes(value) ? 'success' : ['inspection', 'at-port', 'In-Transit', 'in-progress', 'pending', 'submitted'].includes(value) ? 'warning' : ['cancelled', 'hold'].includes(value) ? 'danger' : 'info'
 const nextId = (prefix: string, count: number) => `${prefix}-${String(count + 1).padStart(4, '0')}`
 
 function Shell({ title, description, children, action }: { title: string; description: string; children: React.ReactNode; action?: React.ReactNode }) {
@@ -30,6 +30,9 @@ function Forwarding({ initialJobId }: { initialJobId?: string }) {
     const job = state.jobs.find((item) => item.id === selected.jobId)
     const shipment = state.shipments.find((item) => item.id === selected.shipmentId)
     const container = state.containers.find((item) => item.jobId === selected.jobId)
+    const customer = state.customers.find((item) => item.id === selected.customerId)
+    const shipmentStatus = shipment?.status ?? 'Not provided'
+    const containerStatus = container?.movementStatus ?? 'Not provided'
     const recordMilestone = () => {
       if (!shipment || selected.milestones.some((item) => item.toLowerCase().startsWith(milestone.toLowerCase()))) {
         showToast(!shipment ? 'The forwarding booking has no linked shipment.' : 'That milestone has already been recorded.')
@@ -39,7 +42,7 @@ function Forwarding({ initialJobId }: { initialJobId?: string }) {
       const updatedRecord = { ...selected, milestones: [...selected.milestones, `${milestone} · ${state.demoDate}`] }
       dispatch({ type: 'update-forwarding', record: updatedRecord })
       if (['Vessel departed', 'In transit'].includes(milestone)) dispatch({ type: 'update-shipment', shipment: { ...shipment, status: 'In-Transit' } })
-      if (milestone === 'Delivery completed') dispatch({ type: 'update-shipment', shipment: { ...shipment, status: 'delivered' } })
+      if (milestone === 'Delivery completed') dispatch({ type: 'update-shipment', shipment: { ...shipment, status: 'Delivered' } })
       dispatch({ type: 'add-shipment-milestone', milestone: { id: generateRecordId(state, 'shipmentMilestones'), shipmentId: shipment.id, jobId: selected.jobId, title: milestone, occurredAt, source: 'forwarding', sourceRecordId: selected.id, customerVisible: true } })
       if (container && milestone === 'Discharged at port') {
         dispatch({ type: 'update-container', container: { ...container, movementStatus: 'at-port' } })
@@ -50,7 +53,102 @@ function Forwarding({ initialJobId }: { initialJobId?: string }) {
       showToast(`${milestone} recorded against ${shipment.reference}.`)
     }
     const milestoneOptions = ['Booking confirmed', 'Cargo received', 'Loaded on vessel', 'Vessel departed', 'In transit', 'Discharged at port', 'Cargo released', 'Delivery completed']
-    return <Shell title={selected.bookingReference} description="Forwarding detail, milestones and linked container records." action={<Button variant="secondary" onClick={() => setSelected(undefined)}>Back to forwarding</Button>}><div className="content-grid content-grid--wide"><Card><div className="detail-grid"><span>Job Number<strong>{job?.jobNumber}</strong></span><span>Customer<strong>{state.customers.find((item) => item.id === selected.customerId)?.name}</strong></span><span>Shipment<strong>{shipment?.reference}</strong></span><span>Mode<strong>{selected.mode} · {selected.direction}</strong></span><span>Carrier<strong>{selected.carrier || 'Not provided'}</strong></span><span>Vessel / voyage<strong>{selected.vessel || 'Not provided'} · {selected.voyage || 'Not provided'}</strong></span><span>ETD<strong>{selected.etd || 'Not provided'}</strong></span><span>ETA<strong>{selected.eta || 'Not provided'}</strong></span><span>BL / HBL / MBL<strong>{selected.bl || '-'} / {selected.hbl || '-'} / {selected.mbl || '-'}</strong></span><span>Free days<strong>{selected.freeDays} days</strong></span><span>Demurrage<strong>RM {selected.demurrageRate}/day</strong></span><span>Detention<strong>RM {selected.detentionRate}/day</strong></span></div></Card><Card><p className="eyebrow">Shipment milestones</p><h2>{container?.containerNumber ?? 'No container linked'}</h2><ul className="timeline-list">{selected.milestones.map((item) => <li key={item}><span className="timeline-dot" /><strong>{item}</strong></li>)}</ul>{selected.milestones.length === 0 && <p className="card-copy">No forwarding events have been recorded yet.</p>}<FormField label="Record forwarding milestone"><select value={milestone} onChange={(event) => setMilestone(event.target.value)}>{milestoneOptions.filter((option) => !selected.milestones.some((item) => item.toLowerCase().startsWith(option.toLowerCase()))).map((option) => <option key={option}>{option}</option>)}</select></FormField><Button variant="secondary" onClick={recordMilestone}>Record milestone</Button></Card></div></Shell>
+    return (
+      <Shell
+        title={selected.bookingReference}
+        description="Forwarding detail, milestones and linked container records."
+        action={<Button variant="secondary" onClick={() => setSelected(undefined)}>Back to forwarding</Button>}
+      >
+        <div className="forwarding-detail-layout">
+          <Card className="forwarding-detail-card">
+            <div className="forwarding-detail__heading">
+              <div>
+                <p className="eyebrow">Booking details</p>
+                <h2>Shipment information</h2>
+              </div>
+              <div className="forwarding-detail__status">
+                <small>Shipment status</small>
+                <StatusBadge tone={tone(shipmentStatus)}>{shipmentStatus}</StatusBadge>
+              </div>
+            </div>
+            <section className="forwarding-detail__section" aria-labelledby="forwarding-shipment-heading">
+              <h3 id="forwarding-shipment-heading">Shipment</h3>
+              <dl className="forwarding-detail__facts">
+                <div><dt>Job number</dt><dd>{job?.jobNumber ?? 'Not provided'}</dd></div>
+                <div><dt>Customer</dt><dd>{customer?.name ?? 'Not provided'}</dd></div>
+                <div><dt>Shipment reference</dt><dd>{shipment?.reference ?? 'Not provided'}</dd></div>
+                <div><dt>Transport</dt><dd>{selected.mode} · {selected.direction}</dd></div>
+                <div><dt>Route</dt><dd>{shipment ? `${shipment.origin} → ${shipment.destination}` : 'Not provided'}</dd></div>
+                <div><dt>Cargo description</dt><dd>{shipment?.cargoDescription || 'Not provided'}</dd></div>
+                <div><dt>Transshipment</dt><dd>{selected.transshipment ? 'Yes' : 'No'}</dd></div>
+                <div><dt>Carrier</dt><dd>{selected.carrier || 'Not provided'}</dd></div>
+                <div><dt>Vessel / voyage</dt><dd>{selected.vessel || 'Not provided'} / {selected.voyage || 'Not provided'}</dd></div>
+                <div><dt>ETD</dt><dd>{selected.etd || shipment?.etd || 'Not provided'}</dd></div>
+                <div><dt>ETA</dt><dd>{selected.eta || shipment?.eta || 'Not provided'}</dd></div>
+                <div><dt>Container</dt><dd>{container?.containerNumber ?? 'Not linked'}</dd></div>
+                <div><dt>Container size</dt><dd>{container?.size ?? shipment?.containerType ?? 'Not provided'}</dd></div>
+                <div><dt>Port / location</dt><dd>{container?.port ?? 'Not provided'}</dd></div>
+                <div><dt>Container status</dt><dd>{containerStatus}</dd></div>
+                <div><dt>Free days</dt><dd>{selected.freeDays} days{container?.freeTimeExpiryDate ? ` · expires ${container.freeTimeExpiryDate}` : ''}</dd></div>
+                <div><dt>Demurrage</dt><dd>RM {selected.demurrageRate.toLocaleString('en-MY')} / day</dd></div>
+                <div><dt>Detention</dt><dd>RM {selected.detentionRate.toLocaleString('en-MY')} / day</dd></div>
+                <div><dt>BL / HBL / MBL</dt><dd>{selected.bl || shipment?.blReference || '—'} / {selected.hbl || shipment?.hblReference || '—'} / {selected.mbl || shipment?.mblReference || '—'}</dd></div>
+                <div><dt>Cargo quantity</dt><dd>{[
+                  shipment?.containerQuantity ? `${shipment.containerQuantity} containers` : undefined,
+                  shipment?.cartons ? `${shipment.cartons} cartons` : undefined,
+                  shipment?.pallets ? `${shipment.pallets} pallets` : undefined,
+                  shipment?.cbm ? `${shipment.cbm} CBM` : undefined,
+                  shipment?.weightKg ? `${shipment.weightKg.toLocaleString('en-MY')} kg` : undefined,
+                ].filter(Boolean).join(' · ') || 'Not provided'}</dd></div>
+              </dl>
+            </section>
+          </Card>
+          <Card className="forwarding-detail-card forwarding-detail-card--milestones">
+            <div className="forwarding-detail__heading">
+              <div>
+                <p className="eyebrow">Shipment milestones</p>
+                <h2>{container?.containerNumber ?? shipment?.reference ?? 'Shipment timeline'}</h2>
+              </div>
+              <div className="forwarding-detail__status">
+                <small>Container status</small>
+                <StatusBadge tone={tone(containerStatus)}>{containerStatus}</StatusBadge>
+              </div>
+            </div>
+            {selected.milestones.length > 0 ? (
+              <ol className="forwarding-detail__timeline">
+                {selected.milestones.map((item, index) => {
+                  const [title, recordedDate] = item.split(' · ')
+                  const eventDate = recordedDate ?? state.shipmentMilestones.find((event) =>
+                    event.shipmentId === shipment?.id && event.sourceRecordId === selected.id && event.title === title,
+                  )?.occurredAt.slice(0, 10)
+                  return (
+                    <li className="forwarding-detail__milestone" key={item}>
+                      <span className="forwarding-detail__milestone-marker" aria-hidden="true">{index + 1}</span>
+                      <div>
+                        <strong>{title}</strong>
+                        {eventDate && <small>{eventDate}</small>}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ol>
+            ) : (
+              <p className="forwarding-detail__empty">No forwarding milestones have been recorded yet.</p>
+            )}
+            <div className="forwarding-detail__recorder">
+              <FormField label="Record forwarding milestone">
+                <select value={milestone} onChange={(event) => setMilestone(event.target.value)}>
+                  {milestoneOptions
+                    .filter((option) => !selected.milestones.some((item) => item.toLowerCase().startsWith(option.toLowerCase())))
+                    .map((option) => <option key={option}>{option}</option>)}
+                </select>
+              </FormField>
+              <Button variant="secondary" onClick={recordMilestone}>Record milestone</Button>
+            </div>
+          </Card>
+        </div>
+      </Shell>
+    )
   }
   return <Shell title="Freight Forwarding" description="Bookings, bills of lading, vessels, free days and shipment milestones." action={<Button onClick={() => { setSelected(undefined); setEditing(true) }}>＋ New booking</Button>}>{initialJobId && linkedShipment && !rows.length && <Card className="workflow-callout"><div><strong>{state.jobs.find((job) => job.id === initialJobId)?.jobNumber} · {linkedShipment.reference}</strong><p>Shipment details are shared with Job Management. Create a forwarding booking to add carrier and vessel details without creating another shipment.</p></div><Button onClick={() => { setSelected(undefined); setEditing(true) }}>Create linked booking</Button></Card>}<Card><div className="filter-bar"><input aria-label="Search forwarding" onChange={(event) => setQuery(event.target.value)} placeholder="Search booking, vessel or customer..." value={query} /><select aria-label="Filter shipment mode"><option>All modes</option><option>FCL</option><option>LCL</option></select></div><DataTable headers={['Booking', 'Job Number', 'Customer', 'Mode', 'Vessel / voyage', 'ETA', 'Container', 'Status', 'Action']} rows={rows.map((record) => [record.bookingReference, state.jobs.find((job) => job.id === record.jobId)?.jobNumber, state.customers.find((customer) => customer.id === record.customerId)?.name, `${record.mode} · ${record.direction}`, `${record.vessel || 'Not provided'} / ${record.voyage || 'Not provided'}`, record.eta || 'Not provided', state.containers.find((container) => container.jobId === record.jobId)?.containerNumber ?? 'Pending', <StatusBadge tone={tone(record.milestones.at(-1) ?? 'pending')}>{record.milestones.at(-1) ?? 'Booking created'}</StatusBadge>, <div className="table-actions"><Button variant="ghost" onClick={() => setSelected(record)}>Details</Button><Button variant="ghost" onClick={() => { setSelected(record); setEditing(true) }}>Edit</Button></div>])} />{!rows.length && !initialJobId && <p className="empty-state">No forwarding bookings match this search.</p>}</Card></Shell>
 }
@@ -78,6 +176,10 @@ function Customs() {
   if (selected) {
     const job = state.jobs.find((item) => item.id === selected.jobId)
     const container = state.containers.find((item) => item.jobId === selected.jobId)
+    const missingDocuments = selected.missingDocuments ?? []
+    const checklistDocuments = missingDocuments.length
+      ? missingDocuments
+      : ['K1 declaration', 'Packing list', 'Commercial invoice']
     const currentIndex = selected.status === 'released' ? 6 : selected.status === 'approved' ? 3 : selected.status === 'inspection' ? 2 : selected.status === 'submitted' ? 1 : 0
     const nextStatus: CustomsRecord['status'] | undefined = selected.status === 'draft' ? 'submitted' : selected.status === 'submitted' ? 'inspection' : selected.status === 'inspection' ? 'approved' : selected.status === 'approved' ? 'released' : undefined
     const updateRecord = (record: CustomsRecord, action: string) => {
@@ -86,20 +188,96 @@ function Customs() {
       setSelected(record)
       showToast(action)
     }
-    return <Shell title={`Customs · ${job?.jobNumber}`} description="Simulated customs workflow — no authority integration." action={<Button variant="secondary" onClick={() => setSelected(undefined)}>Back to customs</Button>}><Card><div className="detail-grid"><span>Job / container<strong>{job?.jobNumber} · {container?.containerNumber ?? 'Pending'}</strong></span><span>Declaration<strong>{selected.declarationType}</strong></span><span>Customs status<strong><StatusBadge tone={tone(selected.status)}>{selected.status}</StatusBadge></strong></span><span>Duty / SST<strong>RM {selected.dutyAndSst.toLocaleString('en-MY')} · {selected.dutyStatus ?? 'unpaid'}</strong></span><span>Inspection<strong>{selected.inspectionResult ?? 'pending'}</strong></span><span>EDO<strong>{selected.edoStatus}</strong></span></div><div className="workflow-track">{progress.map((item, index) => <div className={index <= currentIndex ? 'workflow-step workflow-step--done' : 'workflow-step'} key={item}><span>{index + 1}</span><small>{item}</small></div>)}</div><div className="section-heading"><div><p className="eyebrow">Document checklist</p><h2>Required customs documents</h2></div><StatusBadge tone={selected.missingDocuments?.length ? 'warning' : 'success'}>{selected.missingDocuments?.length ? `${selected.missingDocuments.length} missing` : 'Complete'}</StatusBadge></div><ul className="checklist">{(selected.missingDocuments?.length ? selected.missingDocuments : ['K1 declaration', 'Packing list', 'Commercial invoice']).map((item) => <li key={item}><span>{selected.missingDocuments?.includes(item) ? '□' : '✓'}</span>{item}</li>)}</ul>{selected.missingDocuments?.length ? <div className="form-actions"><Button variant="secondary" onClick={() => updateRecord({ ...selected, missingDocuments: [], history: [...(selected.history ?? []), 'Required customs documents confirmed received'] }, 'Required customs documents confirmed received.')}>Confirm missing documents received</Button></div> : null}<div className="form-actions"><Button disabled={!nextStatus || Boolean(selected.missingDocuments?.length)} onClick={() => {
-      if (!nextStatus) return
-      if (selected.missingDocuments?.length) { showToast('Resolve the customs document checklist before advancing this declaration.'); return }
-      const next: CustomsRecord = {
-        ...selected,
-        status: nextStatus,
-        inspectionResult: nextStatus === 'inspection' ? 'pending' : nextStatus === 'approved' ? 'passed' : selected.inspectionResult,
-        edoStatus: nextStatus === 'released' ? 'released' : selected.edoStatus,
-        history: [...(selected.history ?? []), `Customs status changed to ${nextStatus}`],
-      }
-      updateRecord(next, `Customs status changed to ${nextStatus}.`)
-      const shipment = state.shipments.find((item) => item.jobId === selected.jobId)
-      if (shipment) dispatch({ type: 'add-shipment-milestone', milestone: { id: generateRecordId(state, 'shipmentMilestones'), shipmentId: shipment.id, jobId: selected.jobId, title: `Customs ${nextStatus}`, occurredAt: `${state.demoDate}T10:00:00Z`, source: 'customs', sourceRecordId: selected.id, customerVisible: true } })
-    }}>{nextStatus ? `Advance to ${nextStatus}` : 'Workflow released'}</Button></div></Card></Shell>
+    return (
+      <Shell
+        title={`Customs · ${job?.jobNumber}`}
+        description="Simulated customs workflow — no authority integration."
+        action={<Button variant="secondary" onClick={() => setSelected(undefined)}>Back to customs</Button>}
+      >
+        <Card className="customs-detail">
+          <div className="detail-grid">
+            <span>Job / container<strong>{job?.jobNumber} · {container?.containerNumber ?? 'Pending'}</strong></span>
+            <span>Declaration<strong>{selected.declarationType}</strong></span>
+            <span>Customs status<strong><StatusBadge tone={tone(selected.status)}>{selected.status}</StatusBadge></strong></span>
+            <span>Duty / SST<strong>RM {selected.dutyAndSst.toLocaleString('en-MY')} · {selected.dutyStatus ?? 'unpaid'}</strong></span>
+            <span>Inspection<strong>{selected.inspectionResult ?? 'pending'}</strong></span>
+            <span>EDO<strong>{selected.edoStatus}</strong></span>
+          </div>
+          <div className="customs-detail__progress">
+            <ol aria-label="Customs workflow progress" className="customs-detail__stepper">
+              {progress.map((item, index) => (
+                <li
+                  aria-current={index === currentIndex ? 'step' : undefined}
+                  className={index <= currentIndex ? 'customs-detail__step customs-detail__step--done' : 'customs-detail__step'}
+                  key={item}
+                >
+                  <span aria-hidden="true">{index + 1}</span>
+                  <small>{item}</small>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Document checklist</p>
+              <h2>Required customs documents</h2>
+            </div>
+            <StatusBadge tone={missingDocuments.length ? 'warning' : 'success'}>
+              {missingDocuments.length ? `${missingDocuments.length} missing` : 'Complete'}
+            </StatusBadge>
+          </div>
+          <ul className="customs-detail__checklist">
+            {checklistDocuments.map((item) => {
+              const isMissing = missingDocuments.includes(item)
+              return (
+                <li key={item}>
+                  <span
+                    aria-hidden="true"
+                    className={isMissing ? 'customs-detail__document-marker' : 'customs-detail__document-marker customs-detail__document-marker--complete'}
+                  >
+                    {isMissing ? '' : '✓'}
+                  </span>
+                  {item}
+                </li>
+              )
+            })}
+          </ul>
+          <div className="customs-detail__actions">
+            {missingDocuments.length > 0 && (
+              <Button
+                variant="secondary"
+                onClick={() => updateRecord({
+                  ...selected,
+                  missingDocuments: [],
+                  history: [...(selected.history ?? []), 'Required customs documents confirmed received'],
+                }, 'Required customs documents confirmed received.')}
+              >
+                Confirm missing documents received
+              </Button>
+            )}
+            <Button disabled={!nextStatus || missingDocuments.length > 0} onClick={() => {
+              if (!nextStatus) return
+              if (missingDocuments.length > 0) {
+                showToast('Resolve the customs document checklist before advancing this declaration.')
+                return
+              }
+              const next: CustomsRecord = {
+                ...selected,
+                status: nextStatus,
+                inspectionResult: nextStatus === 'inspection' ? 'pending' : nextStatus === 'approved' ? 'passed' : selected.inspectionResult,
+                edoStatus: nextStatus === 'released' ? 'released' : selected.edoStatus,
+                history: [...(selected.history ?? []), `Customs status changed to ${nextStatus}`],
+              }
+              updateRecord(next, `Customs status changed to ${nextStatus}.`)
+              const shipment = state.shipments.find((item) => item.jobId === selected.jobId)
+              if (shipment) dispatch({ type: 'add-shipment-milestone', milestone: { id: generateRecordId(state, 'shipmentMilestones'), shipmentId: shipment.id, jobId: selected.jobId, title: `Customs ${nextStatus}`, occurredAt: `${state.demoDate}T10:00:00Z`, source: 'customs', sourceRecordId: selected.id, customerVisible: true } })
+            }}>
+              {nextStatus ? `Advance to ${nextStatus}` : 'Workflow released'}
+            </Button>
+          </div>
+        </Card>
+      </Shell>
+    )
   }
   return <Shell title="Customs Clearance" description="Track K1–K8, ZB, DG, DSO, IGM, SSR, EDO, gate pass and release using a simulated workflow." action={<Button onClick={() => setCreating(true)}>＋ New customs record</Button>}><Card><DataTable headers={['Job', 'Container', 'Declaration', 'Customs status', 'Duty / SST', 'EDO', 'Next action']} rows={records.map((record) => [state.jobs.find((job) => job.id === record.jobId)?.jobNumber, state.containers.find((container) => container.jobId === record.jobId)?.containerNumber ?? '—', record.declarationType, <StatusBadge tone={tone(record.status)}>{record.status}</StatusBadge>, `RM ${record.dutyAndSst.toLocaleString('en-MY')} · ${record.dutyStatus ?? 'unpaid'}`, record.edoStatus, <Button variant="ghost" onClick={() => setSelected(record)}>Open workflow</Button>])} /></Card></Shell>
 }
@@ -143,9 +321,9 @@ function Containers() {
   if (selected) {
     const shipment = state.shipments.find((item) => item.id === selected.shipmentId)
     const events = state.containerEvents.filter((event) => event.containerId === selected.id)
-    return <Shell title={selected.containerNumber} description="Simulated port and movement tracking." action={<Button variant="secondary" onClick={() => setSelected(undefined)}>Back to tracking</Button>}><div className="content-grid content-grid--wide"><Card><div className="detail-grid"><span>Job Number<strong>{state.jobs.find((job) => job.id === selected.jobId)?.jobNumber}</strong></span><span>Shipment<strong>{shipment?.reference}</strong></span><span>Vessel / voyage<strong>{selected.vessel} / {selected.voyage}</strong></span><span>Location<strong>{selected.port}</strong></span><span>ETA<strong>{selected.eta}</strong></span><span>Free days<strong>{selected.freeDays} days</strong></span></div><Button onClick={() => { const nextStatus: Container['movementStatus'] = selected.movementStatus === 'Booked' ? 'at-port' : selected.movementStatus === 'at-port' ? 'delivered' : 'empty-returned'; const next = { ...selected, movementStatus: nextStatus }; dispatch({ type: 'update-container', container: next }); dispatch({ type: 'add-container-event', event: { id: nextId('cev', state.containerEvents.length), containerId: selected.id, status: nextStatus === 'empty-returned' ? 'empty-returned' : nextStatus, location: selected.port, occurredAt: `${state.demoDate}T10:00:00Z`, note: 'Tracking update simulated' } }); showToast(`Container updated to ${nextStatus}.`) }}>Simulate tracking update</Button></Card><Card><p className="eyebrow">Event history</p><h2>Movement timeline</h2><ul className="timeline-list">{events.map((event) => <li key={event.id}><span className="timeline-dot" /><div><strong>{event.status} · {event.location}</strong><small>{event.occurredAt} · {event.note}</small></div></li>)}</ul></Card></div></Shell>
+    return <Shell title={selected.containerNumber} description="Simulated port and movement tracking." action={<Button variant="secondary" onClick={() => setSelected(undefined)}>Back to tracking</Button>}><div className="content-grid content-grid--wide"><Card><div className="detail-grid"><span>Job Number<strong>{state.jobs.find((job) => job.id === selected.jobId)?.jobNumber}</strong></span><span>Shipment<strong>{shipment?.reference}</strong></span><span>Vessel / voyage<strong>{selected.vessel} / {selected.voyage}</strong></span><span>Location<strong>{selected.port}</strong></span><span>ETA<strong>{selected.eta}</strong></span><span>Free days<strong>{selected.freeDays} days</strong></span></div><Button onClick={() => { const nextStatus: Container['movementStatus'] = selected.movementStatus === 'Booked' ? 'at-port' : selected.movementStatus === 'at-port' ? 'Delivered' : 'empty-returned'; const next = { ...selected, movementStatus: nextStatus }; dispatch({ type: 'update-container', container: next }); dispatch({ type: 'add-container-event', event: { id: nextId('cev', state.containerEvents.length), containerId: selected.id, status: nextStatus === 'empty-returned' ? 'empty-returned' : nextStatus, location: selected.port, occurredAt: `${state.demoDate}T10:00:00Z`, note: 'Tracking update simulated' } }); showToast(`Container updated to ${nextStatus}.`) }}>Simulate tracking update</Button></Card><Card><p className="eyebrow">Event history</p><h2>Movement timeline</h2><ul className="timeline-list">{events.map((event) => <li key={event.id}><span className="timeline-dot" /><div><strong>{event.status} · {event.location}</strong><small>{event.occurredAt} · {event.note}</small></div></li>)}</ul></Card></div></Shell>
   }
-  return <Shell title="Container Tracking" description="Monitor container locations, ETAs, free days and movement history." action={<div className="filter-bar"><select onChange={(event) => setFilter(event.target.value)} value={filter}><option value="all">All statuses</option><option value="Booked">Booked</option><option value="at-port">At port</option><option value="delivered">Delivered</option></select></div>}><Card><DataTable headers={['Container', 'Job', 'Shipment', 'Vessel / voyage', 'Port', 'ETA', 'Free days', 'Status', 'Action']} rows={rows.map((container) => [container.containerNumber, state.jobs.find((job) => job.id === container.jobId)?.jobNumber, state.shipments.find((shipment) => shipment.id === container.shipmentId)?.reference, `${container.vessel} / ${container.voyage}`, container.port, container.eta, `${container.freeDays} days`, <StatusBadge tone={tone(container.movementStatus)}>{container.movementStatus}</StatusBadge>, <Button variant="ghost" onClick={() => setSelected(container)}>Details</Button>])} /></Card></Shell>
+  return <Shell title="Container Tracking" description="Monitor container locations, ETAs, free days and movement history." action={<div className="filter-bar"><select onChange={(event) => setFilter(event.target.value)} value={filter}><option value="all">All statuses</option><option value="Booked">Booked</option><option value="at-port">At port</option><option value="Delivered">Delivered</option></select></div>}><Card><DataTable headers={['Container', 'Job', 'Shipment', 'Vessel / voyage', 'Port', 'ETA', 'Free days', 'Status', 'Action']} rows={rows.map((container) => [container.containerNumber, state.jobs.find((job) => job.id === container.jobId)?.jobNumber, state.shipments.find((shipment) => shipment.id === container.shipmentId)?.reference, `${container.vessel} / ${container.voyage}`, container.port, container.eta, `${container.freeDays} days`, <StatusBadge tone={tone(container.movementStatus)}>{container.movementStatus}</StatusBadge>, <Button variant="ghost" onClick={() => setSelected(container)}>Details</Button>])} /></Card></Shell>
 }
 
 function MasterTabs({ active, onNavigate }: { active: 'list' | 'trucks' | 'trailers' | 'drivers'; onNavigate: (screen: 'list' | 'trucks' | 'trailers' | 'drivers') => void }) {

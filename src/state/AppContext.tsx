@@ -236,6 +236,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'add-warehouse-inbound': {
       if (state.warehouseInbounds.some((inbound) => inbound.id === action.inbound.id || (inbound.jobId === action.inbound.jobId && inbound.reference === action.inbound.reference))) return state
       if (!state.jobs.some((job) => job.id === action.inbound.jobId) || !state.warehouseTransactions.some((transaction) => transaction.id === action.inbound.transactionId && transaction.jobId === action.inbound.jobId) || !state.inventory.some((item) => item.id === action.inbound.inventoryId && item.jobId === action.inbound.jobId)) return state
+      if (action.inbound.items?.some((line) =>
+        !state.inventory.some((item) => item.id === line.inventoryId && item.jobId === action.inbound.jobId)
+        || !state.warehouseTransactions.some((transaction) => transaction.id === line.transactionId && transaction.jobId === action.inbound.jobId && transaction.inventoryId === line.inventoryId && transaction.type === 'receiving' && transaction.reference === action.inbound.reference),
+      )) return state
       return { ...state, warehouseInbounds: [...state.warehouseInbounds, action.inbound] }
     }
     case 'add-goods-received-note': {

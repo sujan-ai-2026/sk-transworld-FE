@@ -261,7 +261,7 @@ export function deriveAlerts(state: AppState): Alert[] {
   const alerts: Alert[] = []
   const add = (alert: Omit<Alert, 'resolved'>) => alerts.push({ ...alert, resolved: state.alerts.find((existing) => existing.id === alert.id)?.resolved ?? false })
   state.containers.forEach((container) => {
-    if (container.movementStatus !== 'delivered' && container.movementStatus !== 'empty-returned') {
+    if (container.movementStatus !== 'Delivered' && container.movementStatus !== 'empty-returned') {
       const expiry = container.freeTimeExpiryDate ?? state.containerEvents.find((event) => event.containerId === container.id && event.status === 'at-port')?.occurredAt.slice(0, 10)
       const days = expiry ? dateDifference(expiry, state.demoDate) : undefined
       if (expiry && days !== undefined && days <= 1) add({ id: `alert-free-${container.id}`, type: 'free-days', title: days < 0 ? 'Container free time expired' : days === 0 ? 'Container free time expires today' : 'Container free time expires tomorrow', description: `${container.containerNumber} · Job ${state.jobs.find((job) => job.id === container.jobId)?.jobNumber}`, severity: days === 0 ? 'High' : 'Medium', jobId: container.jobId, sourceRecordId: container.id, sourceRecordType: 'container', dueDate: expiry, recipientRole: 'operations', actionPath: '/app/containers' })
