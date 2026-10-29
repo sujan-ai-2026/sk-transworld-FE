@@ -1,0 +1,252 @@
+.logistics-animation {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.logistics-animation-scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.logistics-animation-player {
+  position: absolute;
+  inset: 0;
+  display: block;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.logistics-animation-player--loaded {
+  opacity: 1;
+}
+
+.logistics-animation-callout {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 13px;
+  border: 1px solid #e8edf4;
+  border-radius: 12px;
+  background: linear-gradient(110deg, #f8faff, #fff 72%);
+}
+
+.logistics-animation-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.logistics-animation-copy strong {
+  color: #43546d;
+  font-size: 10px;
+  font-weight: 720;
+}
+
+.logistics-animation-copy small,
+.logistics-animation-inline small {
+  color: #8290a3;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.dashboard-logistics-illustration {
+  min-height: 84px;
+  margin: 0 0 16px;
+}
+
+.logistics-animation-pair {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.job-progress-illustration {
+  width: fit-content;
+  max-width: 100%;
+  margin: 13px 0;
+}
+
+.truck-cargo-illustration {
+  width: fit-content;
+  max-width: 100%;
+  margin: 3px 0 12px auto;
+  padding: 5px 10px;
+}
+
+.logistics-animation-inline {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.logistics-animation-placeholder {
+  width: 48%;
+  height: 48%;
+  border: 2px solid #dfe8f4;
+  border-top-color: #3783ff;
+  border-radius: 50%;
+}
+
+.animation-truck,
+.animation-container-stack,
+.animation-forklift,
+.animation-cargo,
+.animation-scan,
+.animation-success-badge,
+.animation-loader-arc {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-duration: var(--animation-duration, 4s);
+  animation-delay: 0s;
+  animation-iteration-count: var(--animation-iteration-count, infinite);
+  animation-play-state: var(--animation-play-state, running);
+  animation-timing-function: ease-in-out;
+}
+
+.animation-truck {
+  animation-name: logistics-truck-roll;
+}
+
+.animation-container-stack {
+  animation-name: logistics-ship-rock;
+}
+
+.animation-forklift {
+  animation-name: logistics-forklift-move;
+}
+
+.animation-cargo {
+  animation-name: logistics-cargo-in;
+}
+
+.animation-cargo--out {
+  animation-name: logistics-cargo-out;
+}
+
+.animation-scan {
+  animation-name: logistics-scan;
+}
+
+.animation-success-badge {
+  animation-name: logistics-success-pop;
+}
+
+.animation-loader-arc {
+  animation-name: logistics-loader-spin;
+  animation-timing-function: linear;
+}
+
+.animation-road {
+  stroke: #cbd6e4;
+  stroke-width: 2;
+}
+
+.animation-road-mark {
+  stroke: #efb54a;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 11 8;
+  animation: logistics-road-scroll var(--animation-duration, 4s) linear infinite;
+  animation-play-state: var(--animation-play-state, running);
+}
+
+.animation-cloud {
+  fill: none;
+  stroke: #c6d4e5;
+  stroke-width: 3;
+  stroke-linecap: round;
+  animation: logistics-cloud-drift 6s ease-in-out infinite alternate;
+  animation-play-state: var(--animation-play-state, running);
+}
+
+.animation-water {
+  fill: none;
+  stroke: #73a9ed;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 14 9;
+  animation: logistics-road-scroll var(--animation-duration, 4s) linear infinite;
+  animation-play-state: var(--animation-play-state, running);
+}
+
+@keyframes logistics-truck-roll {
+  0%, 100% { transform: translateX(-3px); }
+  50% { transform: translateX(5px); }
+}
+
+@keyframes logistics-road-scroll {
+  to { stroke-dashoffset: -40; }
+}
+
+@keyframes logistics-cloud-drift {
+  to { transform: translateX(16px); }
+}
+
+@keyframes logistics-ship-rock {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-2px) rotate(1deg); }
+}
+
+@keyframes logistics-forklift-move {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(30px); }
+}
+
+@keyframes logistics-cargo-in {
+  0%, 100% { transform: translateX(-15px); }
+  50% { transform: translateX(0); }
+}
+
+@keyframes logistics-cargo-out {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(18px); }
+}
+
+@keyframes logistics-scan {
+  0%, 100% { transform: translateY(0); opacity: 0.35; }
+  50% { transform: translateY(-44px); opacity: 0.95; }
+}
+
+@keyframes logistics-success-pop {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+}
+
+@keyframes logistics-loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logistics-animation * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-play-state: paused !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-logistics-illustration {
+    gap: 4px;
+    padding: 7px;
+  }
+
+  .dashboard-logistics-illustration .logistics-animation-pair {
+    gap: 0;
+  }
+
+  .dashboard-logistics-illustration .logistics-animation-copy small {
+    font-size: 8px;
+  }
+}
