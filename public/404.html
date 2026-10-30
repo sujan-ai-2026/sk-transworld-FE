@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Opening SK Transworld</title>
+  </head>
+  <body>
+    <p>Opening SK Transworld...</p>
+    <script>
+      const requestedPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
+      window.location.replace(`/?spa-redirect=${encodeURIComponent(requestedPath)}`)
+    </script>
+  </body>
+</html>

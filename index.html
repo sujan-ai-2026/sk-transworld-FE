@@ -9,6 +9,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      const redirectPath = new URLSearchParams(window.location.search).get('spa-redirect')
+      if (redirectPath?.startsWith('/') && !redirectPath.startsWith('//')) {
+        const target = new URL(redirectPath, window.location.origin)
+        if (target.origin === window.location.origin) {
+          window.history.replaceState(null, '', `${target.pathname}${target.search}${target.hash}`)
+        }
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
