@@ -9,6 +9,7 @@ export interface NavigationItem {
 
 export const logisticsNavigation: NavigationItem[] = [
   { label: 'Dashboard', path: '/app/dashboard', group: 'Overview', description: 'Operations and financial snapshot' },
+  { label: 'Whaant', path: '/app/whaant', group: 'Overview', description: 'Ask questions about jobs, shipments and finance' },
   { label: 'Customers', path: '/app/customers', group: 'Master data', description: 'Customer profiles and billing details' },
   { label: 'Suppliers', path: '/app/suppliers', group: 'Master data', description: 'Supplier services and rate references' },
   { label: 'Quotations & Rates', path: '/app/quotations', group: 'Commercial', description: 'Quotes, tariffs and approvals' },
@@ -24,6 +25,7 @@ export const logisticsNavigation: NavigationItem[] = [
   { label: 'Payment Vouchers', path: '/app/vouchers', group: 'Finance', description: 'Voucher approvals and posting' },
   { label: 'Bank Reconciliation', path: '/app/reconciliation', group: 'Finance', description: 'Statement matching' },
   { label: 'Job Costing', path: '/app/job-costing', group: 'Finance', description: 'Revenue, costs and gross profit' },
+  { label: 'Ledger Summary', path: '/app/ledger-summary', group: 'Finance', description: 'Account balances and ledger activity' },
   { label: 'Financial Statements', path: '/app/financial-statements', group: 'Finance', description: 'Demo P&L and balance sheet' },
   { label: 'Reports', path: '/app/reports', group: 'Insights', description: 'Operational and management reports' },
   { label: 'Alerts & Follow-ups', path: '/app/alerts', group: 'Insights', description: 'Exceptions requiring attention' },

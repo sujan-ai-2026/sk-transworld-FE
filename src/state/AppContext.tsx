@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type Dispatch, type ReactNode } from 'react'
 import { cloneSeedState, loadState, resetState, saveState } from '../services/mockStore.ts'
-import { calculateAvailableInventory, canMatchReconciliation } from '../domain/calculations.ts'
+import { calculateAvailableInventory, calculateInvoiceTotals, canMatchReconciliation } from '../domain/calculations.ts'
 import { validateInvoice, validateJob } from '../domain/validators.ts'
 import { createTripPlan, validateTripPlan } from '../domain/tripPlanning.ts'
 import { applyOutboundCommand, applyOutboundTripUpdate, type OutboundCommand } from '../domain/outboundWorkflow.ts'
@@ -367,11 +367,26 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'add-payment': {
       if (state.paymentTransactions.some((payment) => payment.id === action.payment.id || payment.reference.toLowerCase() === action.payment.reference.toLowerCase() || (action.payment.voucherId && payment.voucherId === action.payment.voucherId) || (action.payment.supplierInvoiceId && payment.supplierInvoiceId === action.payment.supplierInvoiceId) || (action.payment.reimbursementId && payment.reimbursementId === action.payment.reimbursementId))) return state
       if (!Number.isFinite(action.payment.amount) || action.payment.amount <= 0) return state
+      const customerInvoice = action.payment.invoiceId && state.customerInvoices.find((invoice) => invoice.id === action.payment.invoiceId)
+      if (action.payment.invoiceId && (!customerInvoice || !['approved', 'finalised', 'paid'].includes(customerInvoice.status))) return state
+      if (customerInvoice) {
+        const alreadyReceived = state.paymentTransactions.filter((payment) => payment.invoiceId === customerInvoice.id && payment.status === 'posted').reduce((sum, payment) => sum + payment.amount, 0)
+        if (alreadyReceived + action.payment.amount > calculateInvoiceTotals(customerInvoice).total) return state
+      }
       const voucher = action.payment.voucherId && state.paymentVouchers.find((item) => item.id === action.payment.voucherId)
       if (action.payment.voucherId && (!voucher || voucher.status !== 'posted' || voucher.amount !== action.payment.amount)) return state
       if (action.payment.supplierInvoiceId && (!state.supplierInvoices.some((invoice) => invoice.id === action.payment.supplierInvoiceId && invoice.status === 'posted' && invoice.amount === action.payment.amount) || !state.paymentVouchers.some((item) => item.supplierInvoiceId === action.payment.supplierInvoiceId && ['posted', 'paid'].includes(item.status)))) return state
       if (action.payment.reimbursementId && (!state.reimbursements.some((request) => request.id === action.payment.reimbursementId && request.status === 'approved' && request.amount === action.payment.amount) || !state.paymentVouchers.some((item) => item.reimbursementId === action.payment.reimbursementId && ['posted', 'paid'].includes(item.status)))) return state
-      return { ...state, paymentTransactions: [...state.paymentTransactions, action.payment] }
+      const paymentTransactions = [...state.paymentTransactions, action.payment]
+      return {
+        ...state,
+        paymentTransactions,
+        customerInvoices: customerInvoice ? state.customerInvoices.map((invoice) => {
+          if (invoice.id !== customerInvoice.id) return invoice
+          const received = paymentTransactions.filter((payment) => payment.invoiceId === invoice.id && payment.status === 'posted').reduce((sum, payment) => sum + payment.amount, 0)
+          return { ...invoice, paymentStatus: received >= calculateInvoiceTotals(invoice).total ? 'paid' : 'partially-paid' }
+        }) : state.customerInvoices,
+      }
     }
     case 'add-bank-transaction': {
       if (state.bankTransactions.some((item) => item.id === action.transaction.id || item.reference.toLowerCase() === action.transaction.reference.toLowerCase())) return state

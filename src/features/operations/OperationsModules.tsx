@@ -10,7 +10,21 @@ import { canTransitionTrip, tripAvailability, validateTripPlan } from '../../dom
 import './TripDetail.css'
 
 const tone = (value: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' => ['Delivered', 'completed', 'released', 'approved', 'empty-returned'].includes(value) ? 'success' : ['inspection', 'at-port', 'In-Transit', 'in-progress', 'pending', 'submitted'].includes(value) ? 'warning' : ['cancelled', 'hold'].includes(value) ? 'danger' : 'info'
-const nextId = (prefix: string, count: number) => `${prefix}-${String(count + 1).padStart(4, '0')}`
+const trackingDate = (value?: string) => {
+  if (!value) return 'Not recorded'
+  const date = new Date(value.includes('T') ? value : `${value}T12:00:00`)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+const trackingDateTime = (value: string) => {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('en-MY', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+const trackingDaysUntil = (date: string | undefined, referenceDate: string) => {
+  if (!date) return undefined
+  const expiry = Date.parse(`${date}T00:00:00Z`)
+  const reference = Date.parse(`${referenceDate}T00:00:00Z`)
+  return Number.isNaN(expiry) || Number.isNaN(reference) ? undefined : Math.ceil((expiry - reference) / 86_400_000)
+}
 
 function Shell({ title, description, children, action }: { title: string; description: string; children: React.ReactNode; action?: React.ReactNode }) {
   return <><PageHeader eyebrow="Operations" title={title} description={description} actions={action} />{children}</>
@@ -320,8 +334,104 @@ function Containers() {
   const rows = state.containers.filter((container) => filter === 'all' || container.movementStatus === filter)
   if (selected) {
     const shipment = state.shipments.find((item) => item.id === selected.shipmentId)
-    const events = state.containerEvents.filter((event) => event.containerId === selected.id)
-    return <Shell title={selected.containerNumber} description="Simulated port and movement tracking." action={<Button variant="secondary" onClick={() => setSelected(undefined)}>Back to tracking</Button>}><div className="content-grid content-grid--wide"><Card><div className="detail-grid"><span>Job Number<strong>{state.jobs.find((job) => job.id === selected.jobId)?.jobNumber}</strong></span><span>Shipment<strong>{shipment?.reference}</strong></span><span>Vessel / voyage<strong>{selected.vessel} / {selected.voyage}</strong></span><span>Location<strong>{selected.port}</strong></span><span>ETA<strong>{selected.eta}</strong></span><span>Free days<strong>{selected.freeDays} days</strong></span></div><Button onClick={() => { const nextStatus: Container['movementStatus'] = selected.movementStatus === 'Booked' ? 'at-port' : selected.movementStatus === 'at-port' ? 'Delivered' : 'empty-returned'; const next = { ...selected, movementStatus: nextStatus }; dispatch({ type: 'update-container', container: next }); dispatch({ type: 'add-container-event', event: { id: nextId('cev', state.containerEvents.length), containerId: selected.id, status: nextStatus === 'empty-returned' ? 'empty-returned' : nextStatus, location: selected.port, occurredAt: `${state.demoDate}T10:00:00Z`, note: 'Tracking update simulated' } }); showToast(`Container updated to ${nextStatus}.`) }}>Simulate tracking update</Button></Card><Card><p className="eyebrow">Event history</p><h2>Movement timeline</h2><ul className="timeline-list">{events.map((event) => <li key={event.id}><span className="timeline-dot" /><div><strong>{event.status} · {event.location}</strong><small>{event.occurredAt} · {event.note}</small></div></li>)}</ul></Card></div></Shell>
+    const job = state.jobs.find((item) => item.id === selected.jobId)
+    const customer = job && state.customers.find((item) => item.id === job.customerId)
+    const forwarding = state.forwardingRecords.find((record) => record.shipmentId === selected.shipmentId)
+    const trip = state.trips.find((item) => item.containerId === selected.id)
+    const customs = state.customsRecords.find((record) => record.jobId === selected.jobId)
+    const events = state.containerEvents
+      .filter((event) => event.containerId === selected.id)
+      .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
+    const latestEvent = events[0]
+    const freeTimeDays = trackingDaysUntil(selected.freeTimeExpiryDate, state.demoDate)
+    const statusSteps: Container['movementStatus'][] = ['Booked', 'at-port', 'Delivered', 'empty-returned']
+    const currentStep = Math.max(0, statusSteps.indexOf(selected.movementStatus))
+    const canAdvance = selected.movementStatus !== 'empty-returned'
+    const simulateUpdate = () => {
+      const nextStatus: Container['movementStatus'] = selected.movementStatus === 'Booked' ? 'at-port' : selected.movementStatus === 'at-port' ? 'Delivered' : 'empty-returned'
+      const next = { ...selected, movementStatus: nextStatus }
+      const location = nextStatus === 'Delivered' ? trip?.delivery ?? selected.port : selected.port
+      const note = nextStatus === 'at-port'
+        ? 'Container arrival recorded at destination terminal.'
+        : nextStatus === 'Delivered'
+          ? 'Laden container delivered to the consignee.'
+          : 'Empty container return recorded at the port depot.'
+      const occurredAt = `${state.demoDate}T10:00:00Z`
+      dispatch({ type: 'update-container', container: next })
+      dispatch({ type: 'add-container-event', event: { id: generateRecordId(state, 'containerEvents'), containerId: selected.id, status: nextStatus, location, occurredAt, note } })
+      if (shipment && nextStatus === 'Delivered') dispatch({ type: 'update-shipment', shipment: { ...shipment, status: 'Delivered' } })
+      if (shipment) dispatch({ type: 'add-shipment-milestone', milestone: { id: generateRecordId(state, 'shipmentMilestones'), shipmentId: shipment.id, jobId: selected.jobId, title: note, occurredAt, source: 'container', sourceRecordId: selected.id, customerVisible: true } })
+      setSelected(next)
+      showToast(`Container movement recorded: ${nextStatus}.`)
+    }
+    return <Shell title={selected.containerNumber} description="Container movement, shipment and port-event details from shared demo records." action={<Button variant="secondary" onClick={() => setSelected(undefined)}>← Back to tracking</Button>}>
+      <div className="container-detail">
+        <Card className="container-detail__hero">
+          <div className="container-detail__hero-copy">
+            <div className="container-detail__identity">
+              <span className="container-detail__icon" aria-hidden="true">▤</span>
+              <div><p className="eyebrow">{selected.size} container · {shipment?.direction ?? 'import'}</p><h2>{selected.containerNumber}</h2><p>{customer?.name ?? 'Customer'} · {job?.jobNumber ?? 'Job not linked'}</p></div>
+            </div>
+            <StatusBadge tone={tone(selected.movementStatus)}>{selected.movementStatus.replaceAll('-', ' ')}</StatusBadge>
+          </div>
+          <div className="container-route">
+            <div><span className="container-route__pin container-route__pin--origin" /><small>Origin</small><strong>{shipment?.origin ?? 'Not recorded'}</strong></div>
+            <div className="container-route__line"><span>Vessel transit</span></div>
+            <div><span className="container-route__pin container-route__pin--destination" /><small>Current location</small><strong>{latestEvent?.location ?? selected.port}</strong></div>
+            <div className="container-route__line container-route__line--short"><span>Final delivery</span></div>
+            <div><span className="container-route__pin container-route__pin--final" /><small>Destination</small><strong>{shipment?.destination ?? 'Not recorded'}</strong></div>
+          </div>
+          <div className="container-progress" aria-label={`Movement progress: step ${currentStep + 1} of ${statusSteps.length}`}>
+            <div className="container-progress__bar"><span style={{ width: `${(currentStep / (statusSteps.length - 1)) * 100}%` }} /></div>
+            <div className="container-progress__steps">{statusSteps.map((step, index) => <span className={index <= currentStep ? 'is-complete' : ''} key={step}>{step.replaceAll('-', ' ')}</span>)}</div>
+          </div>
+        </Card>
+        <div className="container-detail__columns">
+          <div className="container-detail__main">
+            <Card className="container-detail__facts">
+              <div className="container-section-heading"><div><p className="eyebrow">Shipment overview</p><h2>Container details</h2></div><StatusBadge tone={tone(shipment?.status ?? 'info')}>{shipment?.status ?? 'Shipment status unavailable'}</StatusBadge></div>
+              <div className="container-facts">
+                <span>Job number<strong>{job?.jobNumber ?? '—'}</strong></span>
+                <span>Shipment reference<strong>{shipment?.reference ?? '—'}</strong></span>
+                <span>Booking reference<strong>{forwarding?.bookingReference ?? '—'}</strong></span>
+                <span>Vessel / voyage<strong>{selected.vessel} / {selected.voyage}</strong></span>
+                <span>Port of discharge<strong>{selected.port}</strong></span>
+                <span>Original ETA<strong>{trackingDate(shipment?.eta ?? selected.eta)}</strong></span>
+                <span>Container size<strong>{selected.size}</strong></span>
+                <span>Direction / mode<strong>{(shipment?.direction ?? 'import')} · {(shipment?.mode ?? 'FCL')}</strong></span>
+                <span>Bill of lading<strong>{forwarding?.mbl ?? shipment?.mblReference ?? 'Not recorded'}</strong></span>
+                <span>Last update<strong>{latestEvent ? trackingDateTime(latestEvent.occurredAt) : 'No movement events'}</strong></span>
+              </div>
+            </Card>
+            <Card className="container-detail__events">
+              <div className="container-section-heading"><div><p className="eyebrow">Event history</p><h2>Movement timeline</h2></div><span className="container-event-count">{events.length} {events.length === 1 ? 'event' : 'events'}</span></div>
+              {events.length ? <ol className="container-timeline">{events.map((event, index) => <li className={index === 0 ? 'is-latest' : ''} key={event.id}><span className="container-timeline__marker" aria-hidden="true" /><div className="container-timeline__content"><div><strong>{event.status.replaceAll('-', ' ')}</strong><time>{trackingDateTime(event.occurredAt)}</time></div><span>{event.location}</span><p>{event.note}</p></div></li>)}</ol> : <p className="empty-state">No tracking events have been recorded for this container.</p>}
+            </Card>
+          </div>
+          <aside className="container-detail__side">
+            <Card className="container-detail__free-time">
+              <p className="eyebrow">Port free time</p><h2>{selected.freeDays} free days</h2>
+              <p>Free-time expiry: <strong>{trackingDate(selected.freeTimeExpiryDate)}</strong></p>
+              {freeTimeDays !== undefined && <StatusBadge tone={freeTimeDays < 0 ? 'danger' : freeTimeDays <= 1 ? 'warning' : 'success'}>{freeTimeDays < 0 ? `${Math.abs(freeTimeDays)} days overdue` : freeTimeDays === 0 ? 'Expires today' : `${freeTimeDays} days until expiry`}</StatusBadge>}
+              {/* <p className="container-detail__note">Countdown uses the current demo date. Port storage or demurrage charges are not calculated here.</p> */}
+            </Card>
+            <Card className="container-detail__operations">
+              <p className="eyebrow">Clearance & delivery</p><h2>Related operations</h2>
+              <div className="container-operation-row"><span>Customs declaration</span><strong>{customs?.declarationType ?? 'Not created'}</strong></div>
+              <div className="container-operation-row"><span>Customs status</span><StatusBadge tone={tone(customs?.status ?? 'pending')}>{customs?.status ?? 'Not available'}</StatusBadge></div>
+              <div className="container-operation-row"><span>EDO</span><StatusBadge tone={tone(customs?.edoStatus ?? 'pending')}>{customs?.edoStatus ?? 'Not available'}</StatusBadge></div>
+              <div className="container-operation-row"><span>Linked trip</span><strong>{trip?.tripNumber ?? 'Not assigned'}</strong></div>
+              {trip && <div className="container-operation-row"><span>Delivery point</span><strong>{trip.delivery}</strong></div>}
+            </Card>
+            <Card className="container-detail__action">
+              <div><p className="eyebrow">Demo control</p><h2>Tracking update</h2><p>{canAdvance ? 'Advance the container to its next movement stage.' : 'The empty return is recorded; no further movement stage is available.'}</p></div>
+              <Button disabled={!canAdvance} onClick={simulateUpdate}>{canAdvance ? 'Simulate tracking update' : 'Journey completed'}</Button>
+              <small>Updates shared container and shipment activity. No port integration is connected.</small>
+            </Card>
+          </aside>
+        </div>
+      </div>
+    </Shell>
   }
   return <Shell title="Container Tracking" description="Monitor container locations, ETAs, free days and movement history." action={<div className="filter-bar"><select onChange={(event) => setFilter(event.target.value)} value={filter}><option value="all">All statuses</option><option value="Booked">Booked</option><option value="at-port">At port</option><option value="Delivered">Delivered</option></select></div>}><Card><DataTable headers={['Container', 'Job', 'Shipment', 'Vessel / voyage', 'Port', 'ETA', 'Free days', 'Status', 'Action']} rows={rows.map((container) => [container.containerNumber, state.jobs.find((job) => job.id === container.jobId)?.jobNumber, state.shipments.find((shipment) => shipment.id === container.shipmentId)?.reference, `${container.vessel} / ${container.voyage}`, container.port, container.eta, `${container.freeDays} days`, <StatusBadge tone={tone(container.movementStatus)}>{container.movementStatus}</StatusBadge>, <Button variant="ghost" onClick={() => setSelected(container)}>Details</Button>])} /></Card></Shell>
 }

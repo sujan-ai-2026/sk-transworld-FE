@@ -45,6 +45,131 @@ function AiExtraction({ onApply }: { onApply: (profile: ShipmentExtraction) => v
   return <Card className="ai-card"><div className="section-heading"><div><p className="eyebrow">AI extraction simulation — demo only</p><h2>Review a sample shipment document</h2></div><StatusBadge tone="info">No external AI call</StatusBadge></div><p className="card-copy">Choose a fixed sample document. Only values present in that sample are suggested; missing vessel and schedule details stay blank for manual entry.</p><div className="ai-review-controls"><FormField label="Sample document"><select value={sampleId} onChange={(event) => { setSampleId(event.target.value); setExtracted(false) }}>{shipmentExtractionSamples.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FormField><Button variant="secondary" onClick={() => setExtracted(true)}>Extract document</Button></div>{extracted && <div className="ai-review"><div className="ai-suggestion"><StatusBadge tone="warning">Suggested values — confirm before saving</StatusBadge><div className="suggestion-grid"><span>Customer<strong>{sample.customerName}</strong></span><span>Direction / mode<strong>{sample.direction} · {sample.mode}</strong></span><span>Shipment<strong>{sample.shipmentReference}</strong></span><span>Route<strong>{sample.origin} → {sample.destination}</strong></span><span>Vessel / voyage<strong>{sample.vessel || 'Not found — enter manually'} · {sample.voyage || 'Not found — enter manually'}</strong></span><span>ETD / ETA<strong>{sample.etd || 'Not found — enter manually'} · {sample.eta || 'Not found — enter manually'}</strong></span><span>Container<strong>{sample.containerNumber ?? 'Not found — enter manually'}{sample.containerType ? ` · ${sample.containerType}` : ''}</strong></span><span>Cargo<strong>{sample.cargoDescription}</strong></span><span>Quantity / weight<strong>{sample.cartons ?? '—'} cartons · {sample.pallets ?? '—'} pallets · {sample.cbm ?? '—'} CBM · {sample.weightKg ?? '—'} kg</strong></span><span>BL / HBL / MBL<strong>{sample.blReference ?? '—'} · {sample.hblReference ?? '—'} · {sample.mblReference ?? '—'}</strong></span><span>Warehouse<strong>{sample.warehouseRequired ? 'Required' : 'Not required'}</strong></span><span>Supporting documents<strong>{sample.supportingDocuments.join(', ') || 'None found'}</strong></span></div></div>{missing.length > 0 && <p className="form-hint">Manual entry required for: {missing.join(', ')}.</p>}<Button onClick={() => onApply(sample)}>Apply suggestions for review</Button></div>}</Card>
 }
 
+function WarehouseOutboundMockup({ jobNumber, customerName }: { jobNumber: string; customerName: string }) {
+  const [activeStep, setActiveStep] = useState(0)
+  const steps = [
+    { label: 'Picking', status: 'In progress · 340 / 420 ctn' },
+    { label: 'Packing', status: 'In progress · 3 / 4 pallets' },
+    { label: 'Gate pass', status: 'Awaiting security check' },
+    { label: 'Dispatch', status: 'In transit · POD pending' },
+  ]
+  const pickLines = [
+    { sku: 'MF-CN-1201', description: 'Coconut milk 400 ml × 24', location: 'A-03-02-B', lot: 'L2609A · 2027-09', ordered: '120 ctn', picked: '120', status: 'Picked' },
+    { sku: 'MF-RN-0450', description: 'Rice noodles 500 g × 20', location: 'B-01-04-A', lot: 'L2608C · 2027-03', ordered: '80 ctn', picked: '80', status: 'Picked' },
+    { sku: 'MF-SC-0310', description: 'Soy sauce 1 L × 12', location: 'A-05-01-C', lot: 'L2609F · 2028-01', ordered: '60 ctn', picked: '60', status: 'Picked' },
+    { sku: 'MF-FR-0702', description: 'Frozen dumplings 1 kg × 10 · chilled', location: 'C-02-03-A', lot: 'Cold room · L2610B · 2027-04', ordered: '100 ctn', picked: '80', status: 'Short' },
+    { sku: 'MF-TE-0115', description: 'Jasmine tea 100 bags × 36', location: 'B-03-02-B', lot: 'L2607D · 2028-06', ordered: '60 ctn', picked: '0', status: 'Pending' },
+  ]
+  const packageCards = [
+    { name: 'PLT-01', status: 'Sealed', contents: ['MF-CN-1201 · Coconut milk · 120 ctn'], dimensions: '120 × 100 × 150 cm', sscc: '0 9551234 000000101 7' },
+    { name: 'PLT-02', status: 'Sealed', contents: ['MF-RN-0450 · Rice noodles · 80 ctn', 'MF-TE-0115 · Jasmine tea · 60 ctn'], dimensions: '120 × 100 × 160 cm', sscc: '0 9551234 000000102 4' },
+    { name: 'PLT-03', status: 'Sealed', contents: ['MF-SC-0310 · Soy sauce · 60 ctn'], dimensions: '120 × 100 × 110 cm', sscc: '0 9551234 000000103 1' },
+    { name: 'PLT-04 · chilled', status: 'Building', contents: ['MF-FR-0702 · Frozen dumplings · 56 / 80 ctn'], dimensions: 'Keep at −18 °C · reefer required', sscc: 'SSCC assigned on seal' },
+  ]
+  const documents = ['Delivery order OB-2610028', 'Packing list PK-2610028-01', 'Gate pass GP-2610028-01', 'Pallet labels (4)', 'Proof of delivery']
+  const dispatchEvents = [
+    ['Picking confirmed', '30 Oct 10:52 · 400 / 420 ctn · 20 short (line 4)', 'complete'],
+    ['Packing completed', '30 Oct 12:20 · 4 pallets sealed, labels printed', 'complete'],
+    ['Gate pass issued', '30 Oct 13:55 · supervisor + security approved', 'complete'],
+    ['Gate-out scanned', '30 Oct 14:06 · Gate 2 · seal GP-2610028', 'complete'],
+    ['In transit', 'Reefer −18 °C · driver app tracking', 'current'],
+    ['Delivered · POD', 'Awaiting signed POD from consignee', 'pending'],
+  ]
+  const jobRef = jobNumber
+  const stageReference = ['PL-2610028-01', 'PK-2610028-01', 'GP-2610028-01', 'DSP-2610028-01'][activeStep]
+
+  return <Card className="warehouse-outbound-mockup">
+    <div className="section-heading">
+      <div>
+        <p className="eyebrow">Warehouse outbound · Step {activeStep + 1} of 4</p>
+        <h2>{steps[activeStep].label} · {stageReference}</h2>
+      </div>
+      <div className="warehouse-outbound-meta">
+        <span>{jobRef}</span>
+        <span>{customerName}</span>
+        <span>{activeStep === 2 ? 'Gate 2 · outbound' : activeStep === 1 ? 'Pack station PS-03' : 'Shah Alam DC'}</span>
+        <StatusBadge tone="info">Illustrative sample data</StatusBadge>
+      </div>
+    </div>
+    <div className="warehouse-outbound-stepper" aria-label="Outbound workflow steps">
+      {steps.map((step, index) => <button className={index === activeStep ? 'warehouse-outbound-step warehouse-outbound-step--active' : 'warehouse-outbound-step'} key={step.label} aria-current={index === activeStep ? 'step' : undefined} onClick={() => setActiveStep(index)} type="button">
+        <span>{index + 1}</span>
+        <strong>{step.label}</strong>
+        <small>{step.status}</small>
+      </button>)}
+    </div>
+    {activeStep === 0 && <div className="warehouse-outbound-layout">
+      <div className="warehouse-outbound-list">
+        <div className="warehouse-outbound-panel-header"><strong>PICK LINES</strong><span>5 lines · allocation FEFO</span></div>
+        <div className="warehouse-outbound-progress-row"><StatusBadge tone="info">3 picked</StatusBadge><StatusBadge tone="warning">1 short</StatusBadge><StatusBadge tone="neutral">1 pending</StatusBadge></div>
+        <div className="table-scroll"><table className="warehouse-outbound-table">
+          <thead><tr><th>#</th><th>SKU / description</th><th>Location</th><th>Lot · expiry</th><th>Ordered</th><th>Picked</th><th>Status</th></tr></thead>
+          <tbody>{pickLines.map((line, index) => <tr key={line.sku}>
+            <td>{index + 1}</td><td><strong>{line.sku}</strong><small>{line.description}</small></td><td>{line.location}</td><td>{line.lot}</td><td>{line.ordered}</td><td>{line.picked}</td>
+            <td><StatusBadge tone={line.status === 'Picked' ? 'success' : line.status === 'Short' ? 'warning' : 'neutral'}>{line.status}</StatusBadge></td>
+          </tr>)}</tbody>
+        </table></div>
+        <p className="warehouse-outbound-note">Picked 340 of 420 cartons · Unit of measure: carton · Stock is reserved at allocation and deducted on confirm.</p>
+      </div>
+      <div className="warehouse-outbound-sidebar">
+        <div className="warehouse-outbound-callout">
+          <p className="eyebrow">Scan to pick</p><h3>Pick 60 ctn from lot L2607D</h3>
+          <div className="warehouse-outbound-scan"><span>B-03-02-B · MF-TE-0115</span></div>
+          <div className="warehouse-outbound-assignment">
+            <div><small>Picker</small><strong>Ravi Kumar</strong></div><div><small>Equipment</small><strong>Reach truck RT-02</strong></div>
+            <div><small>Wave</small><strong>W-1030-AM</strong></div><div><small>Started</small><strong>30 Oct · 08:15</strong></div>
+          </div>
+        </div>
+        <div className="warehouse-outbound-alert"><p>Exception · line 4</p><strong>20 ctn short at C-02-03-A. No other chilled lot available.</strong><p className="warehouse-outbound-reason">Reason: insufficient stock at bin</p><StatusBadge tone="warning">Review short pick before confirming</StatusBadge></div>
+      </div>
+    </div>}
+    {activeStep === 1 && <div className="warehouse-outbound-layout">
+      <div className="warehouse-outbound-list">
+        <div className="warehouse-outbound-panel-header"><strong>PACKAGES</strong><span>4 pallets · 400 cartons</span></div>
+        <div className="warehouse-package-grid">{packageCards.map((pack) => <article className={pack.status === 'Building' ? 'warehouse-package-card warehouse-package-card--active' : 'warehouse-package-card'} key={pack.name}>
+          <div className="warehouse-package-card__heading"><strong>{pack.name}</strong><StatusBadge tone={pack.status === 'Sealed' ? 'success' : 'info'}>{pack.status}</StatusBadge></div>
+          <small>SSCC {pack.sscc}</small>
+          {pack.contents.map((content) => <p key={content}>{content}</p>)}
+          <small>{pack.dimensions} · weight recorded</small>
+        </article>)}</div>
+        <div className="warehouse-outbound-summary"><span>Packed vs picked<strong>376 / 400 ctn</strong></span><span>Gross weight<strong>1,240 kg</strong></span><span>Volume<strong>5.8 m³</strong></span><span>Labels printed<strong>3 of 4</strong></span></div>
+      </div>
+      <div className="warehouse-outbound-sidebar">
+        <div className="warehouse-outbound-callout">
+          <p className="eyebrow">Pack station · PLT-04</p><h3>Chilled pallet</h3>
+          <div className="warehouse-outbound-scan"><span>Scan carton barcode</span></div>
+          <div className="warehouse-outbound-assignment"><div><small>Cartons scanned</small><strong>56 / 80 ctn</strong></div><div><small>Gross weight</small><strong>186 kg</strong></div><div><small>Height</small><strong>145 cm</strong></div><div><small>Packaging</small><strong>Wooden pallet + stretch wrap</strong></div></div>
+          <StatusBadge tone="warning">Keep at −18 °C · reefer required</StatusBadge>
+        </div>
+        <div className="warehouse-outbound-checklist"><p className="eyebrow">Verification</p><ul><li>✓ Quantities match pick list</li><li>✓ Lots & expiry recorded</li><li>○ Chilled goods temperature logged</li><li>○ Photo of packed pallets attached</li></ul></div>
+      </div>
+    </div>}
+    {activeStep === 2 && <div className="warehouse-outbound-layout">
+      <div className="warehouse-outbound-list">
+        <div className="warehouse-outbound-panel-header"><strong>VEHICLE & DRIVER · PREFILLED FROM TRIP</strong><StatusBadge tone="info">TRP-2610028-01</StatusBadge></div>
+        <div className="warehouse-gate-fields">{[['Haulier', 'Klang Valley Transport'], ['Vehicle no.', 'VBC 2184'], ['Vehicle type', '10-ton reefer lorry'], ['Driver name', 'Mohd Firdaus'], ['Driver ID / licence', 'D-10482 · GDL valid'], ['Seal no.', 'Enter seal number'], ['Deliver to', 'Meridian Foods, Shah Alam'], ['Reefer set point', '−18 °C'], ['Planned gate-out', '30 Oct · 14:00']].map(([label, value]) => <div className="warehouse-gate-field" key={label}><small>{label}</small><strong>{value}</strong></div>)}</div>
+        <div className="warehouse-gate-bottom">
+          <div className="warehouse-outbound-checklist"><p className="eyebrow">Security checklist</p><ul><li>✓ Delivery order & packing list match</li><li>✓ Pallet count verified (4 / 4)</li><li>○ Seal number matches gate pass</li><li>○ Reefer temperature reading recorded</li><li>○ Vehicle & driver ID inspected</li></ul></div>
+          <div className="warehouse-outbound-checklist"><p className="eyebrow">Approvals</p><ul><li><strong>Warehouse supervisor</strong><small>A. Rahman · Approved 12:40</small></li><li><strong>Security officer</strong><small>Pending inspection</small></li></ul></div>
+        </div>
+      </div>
+      <aside className="warehouse-gate-preview">
+        <div className="warehouse-gate-preview__heading"><div><p className="eyebrow">Gate pass preview</p><h3>GP-2610028-01</h3></div><span aria-label="QR code mockup">▦</span></div>
+        <dl><div><dt>Job</dt><dd>{jobRef}</dd></div><div><dt>Outbound order</dt><dd>OB-2610028</dd></div><div><dt>Customer</dt><dd>{customerName}</dd></div><div><dt>Packages</dt><dd>4 pallets · 400 ctn</dd></div><div><dt>Vehicle</dt><dd>VBC 2184</dd></div><div><dt>Seal</dt><dd>Pending</dd></div><div><dt>Valid until</dt><dd>30 Oct · 18:00</dd></div></dl>
+        <p>Security scans the QR at Gate 2 to record gate-out and start dispatch.</p>
+      </aside>
+    </div>}
+    {activeStep === 3 && <div className="warehouse-dispatch-layout">
+      <div className="warehouse-dispatch-stats">{[['Gate-out', '30 Oct · 14:06'], ['Vehicle', 'VBC 2184'], ['Driver', 'Mohd Firdaus'], ['Packages', '4 pallets · 400 ctn'], ['ETA Shah Alam', '30 Oct · 15:30']].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div>
+      <div className="warehouse-dispatch-columns">
+        <section className="warehouse-outbound-checklist"><p className="eyebrow">Outbound timeline</p><ol className="warehouse-dispatch-timeline">{dispatchEvents.map(([title, detail, status]) => <li className={`warehouse-dispatch-event warehouse-dispatch-event--${status}`} key={title}><span aria-hidden="true" /><div><strong>{title}</strong><small>{detail}</small></div></li>)}</ol></section>
+        <section className="warehouse-outbound-checklist"><p className="eyebrow">Documents</p><ul>{documents.map((document, index) => <li key={document}><span>{document}</span><StatusBadge tone={index === documents.length - 1 ? 'warning' : 'success'}>{index === documents.length - 1 ? 'Pending' : 'Available'}</StatusBadge></li>)}</ul></section>
+        <section className="warehouse-outbound-checklist warehouse-dispatch-charges"><p className="eyebrow">Charges to job {jobRef}</p><p className="card-copy">Generated on dispatch; posted to the job cost centre as unbilled until invoiced.</p><ul><li><span>Outbound handling · 400 ctn</span><strong>RM 240</strong></li><li><span>Pallet & wrap · 4</span><strong>RM 120</strong></li><li><span>Chilled handling surcharge</span><strong>RM 80</strong></li><li><span>Local delivery (reefer)</span><strong>RM 450</strong></li></ul><div className="warehouse-outbound-total"><span>Unbilled total</span><strong>RM 890</strong></div></section>
+      </div>
+    </div>}
+  </Card>
+}
+
 function ExistingJobShipmentExtraction({ job, shipment }: { job: Job; shipment: Shipment }) {
   const { state, dispatch } = useAppState()
   const showToast = useToast()
@@ -440,6 +565,7 @@ function JobDetail({ job, onBack, navigate }: { job: Job; onBack: () => void; na
       </Card>
     </div>}
     {tab === 'Operations' && <div className="content-grid content-grid--wide">
+      <WarehouseOutboundMockup jobNumber={job.jobNumber} customerName={customer?.name ?? 'Meridian Foods'} />
       {shipment && <ExistingJobShipmentExtraction job={job} shipment={shipment} />}
       <Card>
         <p className="eyebrow">Shipment and container</p><h2>{shipment?.reference ?? 'No shipment linked'}</h2>

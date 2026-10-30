@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Button, Card, DataTable, FormField, PageHeader, StatusBadge } from '../../components/ui.tsx'
 import { useToast } from '../../components/ToastProvider.tsx'
 import { useConfirmation } from '../../../components/useConfirmation.ts'
@@ -62,7 +62,7 @@ function SupplierInvoicesPage() {
   const validateInvoice = (invoice: SupplierInvoice) => {
     command({ type: 'validate-supplier-invoice', invoiceId: invoice.id }, 'Invoice validated; voucher created and payment remains pending.')
   }
-  return <><PageHeader eyebrow="" title="Supplier Invoices" description="Capture invoices against a job and optional trip/cost category; approval, voucher posting and payment remain separate." /><div className="content-grid content-grid--wide"><Card className="form-card"><div className="form-grid form-grid--three"><FormField label="Supplier"><select value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })}>{state.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></FormField><FormField label="Job Number"><select value={form.jobId} onChange={(event) => setForm({ ...form, jobId: event.target.value, tripId: '' })}>{state.jobs.map((job) => <option key={job.id} value={job.id}>{job.jobNumber}</option>)}</select></FormField><FormField label="Supplier invoice reference"><input value={form.reference} onChange={(event) => setForm({ ...form, reference: event.target.value })} /></FormField><FormField label="Cost category"><select value={form.costCategory} onChange={(event) => setForm({ ...form, costCategory: event.target.value as SupplierCost['category'] })}><option>trucking</option><option>toll</option><option>freight</option><option>customs</option><option>warehouse</option><option>other</option></select></FormField><FormField label="Trip (optional)"><select value={form.tripId} onChange={(event) => setForm({ ...form, tripId: event.target.value })}><option value="">Not trip-specific</option>{state.trips.filter((trip) => trip.jobId === form.jobId).map((trip) => <option key={trip.id} value={trip.id}>{trip.tripNumber}</option>)}</select></FormField><FormField label="Invoice date"><input type="date" value={form.invoiceDate} onChange={(event) => setForm({ ...form, invoiceDate: event.target.value })} /></FormField><FormField label="Due date"><input type="date" value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} /></FormField><FormField label="Import simulation"><input onChange={(event) => setSupportingFile(event.target.files?.[0])} type="file" /></FormField></div><div className="section-heading"><h2>Invoice lines · Total {money(amount)}</h2><Button variant="secondary" onClick={() => setLines((current) => [...current, { id: `sinv-line-${current.length + 1}`, description: '', quantity: 1, unitPrice: 0 }])}>Add line</Button></div>{lines.map((line, index) => <div className="quotation-line" key={line.id}><FormField label={`Line ${index + 1} description`}><input value={line.description} onChange={(event) => setLines((current) => current.map((item) => item.id === line.id ? { ...item, description: event.target.value } : item))} /></FormField><FormField label="Quantity"><input min="1" type="number" value={line.quantity} onChange={(event) => setLines((current) => current.map((item) => item.id === line.id ? { ...item, quantity: Number(event.target.value) } : item))} /></FormField><FormField label="Unit price"><input min="0" type="number" value={line.unitPrice} onChange={(event) => setLines((current) => current.map((item) => item.id === line.id ? { ...item, unitPrice: Number(event.target.value) } : item))} /></FormField><strong>{money(line.quantity * line.unitPrice)}</strong>{lines.length > 1 && <Button variant="ghost" onClick={() => setLines((current) => current.filter((item) => item.id !== line.id))}>Remove</Button>}</div>)}<div className="form-actions"><Button onClick={save}>Capture invoice</Button></div></Card><Card><DataTable headers={['Reference', 'Supplier', 'Job', 'Date / due', 'Amount', 'Validation', 'Invoice status', 'Voucher / payment', 'Action']} rows={state.supplierInvoices.map((invoice) => [invoice.reference, state.suppliers.find((supplier) => supplier.id === invoice.supplierId)?.name, state.jobs.find((job) => job.id === invoice.jobId)?.jobNumber, `${invoice.invoiceDate} / ${invoice.dueDate ?? '—'}`, money(invoice.amount), <StatusBadge tone={tone(invoice.validationStatus ?? 'pending')}>{invoice.validationStatus ?? 'pending'}</StatusBadge>, invoice.status, state.paymentVouchers.find((voucher) => voucher.supplierInvoiceId === invoice.id)?.status ?? invoice.paymentStatus, invoice.status === 'captured' ? <Button variant="ghost" onClick={() => validateInvoice(invoice)}>Validate & create voucher</Button> : '—'])} /></Card></div></>
+  return <><PageHeader eyebrow="" title="Supplier Invoices" description="Capture invoices against a job and optional trip/cost category; approval, voucher posting and payment remain separate." /><div className="content-grid content-grid--wide"><Card className="form-card"><div className="form-grid form-grid--three"><FormField label="Supplier"><select value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })}>{state.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></FormField><FormField label="Job Number"><select value={form.jobId} onChange={(event) => setForm({ ...form, jobId: event.target.value, tripId: '' })}>{state.jobs.map((job) => <option key={job.id} value={job.id}>{job.jobNumber}</option>)}</select></FormField><FormField label="Supplier invoice reference"><input value={form.reference} onChange={(event) => setForm({ ...form, reference: event.target.value })} /></FormField><FormField label="Cost category"><select value={form.costCategory} onChange={(event) => setForm({ ...form, costCategory: event.target.value as SupplierCost['category'] })}><option>trucking</option><option>toll</option><option>freight</option><option>customs</option><option>warehouse</option><option>other</option></select></FormField><FormField label="Trip (optional)"><select value={form.tripId} onChange={(event) => setForm({ ...form, tripId: event.target.value })}><option value="">Not trip-specific</option>{state.trips.filter((trip) => trip.jobId === form.jobId).map((trip) => <option key={trip.id} value={trip.id}>{trip.tripNumber}</option>)}</select></FormField><FormField label="Invoice date"><input type="date" value={form.invoiceDate} onChange={(event) => setForm({ ...form, invoiceDate: event.target.value })} /></FormField><FormField label="Due date"><input type="date" value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} /></FormField><FormField label="Import simulation"><input onChange={(event) => setSupportingFile(event.target.files?.[0])} type="file" /></FormField></div><div className="section-heading"><h2>Invoice lines · Total {money(amount)}</h2><Button variant="secondary" onClick={() => setLines((current) => [...current, { id: `sinv-line-${current.length + 1}`, description: '', quantity: 1, unitPrice: 0 }])}>Add line</Button></div>{lines.map((line, index) => <div className="supplier-invoice-line" key={line.id}><FormField label={`Line ${index + 1} description`}><input value={line.description} onChange={(event) => setLines((current) => current.map((item) => item.id === line.id ? { ...item, description: event.target.value } : item))} /></FormField><FormField label="Quantity"><input min="1" type="number" value={line.quantity} onChange={(event) => setLines((current) => current.map((item) => item.id === line.id ? { ...item, quantity: Number(event.target.value) } : item))} /></FormField><FormField label="Unit price"><input min="0" type="number" value={line.unitPrice} onChange={(event) => setLines((current) => current.map((item) => item.id === line.id ? { ...item, unitPrice: Number(event.target.value) } : item))} /></FormField><strong>{money(line.quantity * line.unitPrice)}</strong>{lines.length > 1 && <Button variant="ghost" onClick={() => setLines((current) => current.filter((item) => item.id !== line.id))}>Remove</Button>}</div>)}<div className="form-actions"><Button onClick={save}>Capture invoice</Button></div></Card><Card><DataTable headers={['Reference', 'Supplier', 'Job', 'Date / due', 'Amount', 'Validation', 'Invoice status', 'Voucher / payment', 'Action']} rows={state.supplierInvoices.map((invoice) => [invoice.reference, state.suppliers.find((supplier) => supplier.id === invoice.supplierId)?.name, state.jobs.find((job) => job.id === invoice.jobId)?.jobNumber, `${invoice.invoiceDate} / ${invoice.dueDate ?? '—'}`, money(invoice.amount), <StatusBadge tone={tone(invoice.validationStatus ?? 'pending')}>{invoice.validationStatus ?? 'pending'}</StatusBadge>, invoice.status, state.paymentVouchers.find((voucher) => voucher.supplierInvoiceId === invoice.id)?.status ?? invoice.paymentStatus, invoice.status === 'captured' ? <Button variant="ghost" onClick={() => validateInvoice(invoice)}>Validate & create voucher</Button> : '—'])} /></Card></div></>
 }
 
 function VouchersPage() {
@@ -170,6 +170,235 @@ function JobCostingPage() {
   )
 }
 
+type LedgerGroup = 'Assets' | 'Liabilities' | 'Equity' | 'Income' | 'Expenses'
+type LedgerAccount = {
+  code: string
+  name: string
+  group: LedgerGroup
+  subgroup: string
+  debit: number
+  credit: number
+  forTag: string
+  jobs: string[]
+}
+
+const initialLedgerAccounts: LedgerAccount[] = [
+  { code: '1010', name: 'Cash in hand', group: 'Assets', subgroup: 'Current Assets', debit: 5000, credit: 0, forTag: 'General', jobs: [] },
+  { code: '1020', name: 'Bank – [Bank name]', group: 'Assets', subgroup: 'Current Assets', debit: 182000, credit: 0, forTag: 'General', jobs: [] },
+  { code: '1100', name: 'Trade receivables', group: 'Assets', subgroup: 'Current Assets', debit: 96300, credit: 0, forTag: 'Customer billing', jobs: ['SKI2610028', 'SKI2610014'] },
+  { code: '1200', name: 'Accrued unbilled revenue', group: 'Assets', subgroup: 'Current Assets', debit: 12450, credit: 0, forTag: 'Warehouse', jobs: ['SKI2610028'] },
+  { code: '1300', name: 'Customs duty deposits', group: 'Assets', subgroup: 'Current Assets', debit: 20000, credit: 0, forTag: 'Customs', jobs: ['SKI2610031'] },
+  { code: '1400', name: 'Staff and supplier advances', group: 'Assets', subgroup: 'Current Assets', debit: 400, credit: 0, forTag: 'General', jobs: [] },
+  { code: '1500', name: 'Prime movers & trailers', group: 'Assets', subgroup: 'Fixed Assets', debit: 450000, credit: 0, forTag: 'Truck', jobs: [] },
+  { code: '1510', name: 'Warehouse equipment', group: 'Assets', subgroup: 'Fixed Assets', debit: 85000, credit: 0, forTag: 'Warehouse', jobs: [] },
+  { code: '2100', name: 'Trade payables', group: 'Liabilities', subgroup: 'Current Liabilities', debit: 0, credit: 74600, forTag: 'Trucking', jobs: ['SKI2610028', 'SKI2610014'] },
+  { code: '2200', name: 'SST payable', group: 'Liabilities', subgroup: 'Current Liabilities', debit: 0, credit: 8940, forTag: 'Tax', jobs: [] },
+  { code: '2300', name: 'Accrued expenses', group: 'Liabilities', subgroup: 'Current Liabilities', debit: 0, credit: 11260, forTag: 'General', jobs: [] },
+  { code: '3000', name: 'Share capital', group: 'Equity', subgroup: 'Capital', debit: 0, credit: 600000, forTag: 'General', jobs: [] },
+  { code: '4100', name: 'Freight revenue', group: 'Income', subgroup: 'Operating Income', debit: 0, credit: 145700, forTag: 'Freight', jobs: ['SKI2610028', 'SKI2610014'] },
+  { code: '4200', name: 'Warehouse revenue', group: 'Income', subgroup: 'Operating Income', debit: 0, credit: 96100, forTag: 'Warehouse', jobs: ['SKI2610028'] },
+  { code: '4300', name: 'Haulage revenue', group: 'Income', subgroup: 'Operating Income', debit: 0, credit: 131200, forTag: 'Haulage', jobs: ['SKI2610028', 'SKI2610014', 'FWD2610031', 'SKI2610022'] },
+  { code: '4400', name: 'Customs revenue', group: 'Income', subgroup: 'Operating Income', debit: 0, credit: 23900, forTag: 'Customs', jobs: ['SKI2610031'] },
+  { code: '5100', name: 'Trucking and subcontractor costs', group: 'Expenses', subgroup: 'Operating Expenses', debit: 112000, credit: 0, forTag: 'Truck', jobs: ['SKI2610028', 'SKI2610014'] },
+  { code: '5200', name: 'Customs and port charges', group: 'Expenses', subgroup: 'Operating Expenses', debit: 35600, credit: 0, forTag: 'Customs', jobs: ['SKI2610031'] },
+  { code: '5300', name: 'Warehouse handling costs', group: 'Expenses', subgroup: 'Operating Expenses', debit: 32450, credit: 0, forTag: 'Warehouse', jobs: ['SKI2610028'] },
+  { code: '5400', name: 'Salaries and allowances', group: 'Expenses', subgroup: 'Operating Expenses', debit: 41000, credit: 0, forTag: 'General', jobs: [] },
+  { code: '5500', name: 'Bank charges', group: 'Expenses', subgroup: 'Operating Expenses', debit: 6500, credit: 0, forTag: 'General', jobs: [] },
+  { code: '5600', name: 'Depreciation', group: 'Expenses', subgroup: 'Operating Expenses', debit: 13000, credit: 0, forTag: 'Truck', jobs: [] },
+]
+
+const ledgerGroups: LedgerGroup[] = ['Assets', 'Liabilities', 'Equity', 'Income', 'Expenses']
+const ledgerGroupTone: Record<LedgerGroup, string> = {
+  Assets: 'assets',
+  Liabilities: 'liabilities',
+  Equity: 'equity',
+  Income: 'income',
+  Expenses: 'expenses',
+}
+const ledgerMoney = (value: number) => value.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const ledgerPostings: Record<string, Array<[string, string, string]>> = {
+  '4300': [
+    ['30 Oct', 'SKI2610028 · INV-88410', '1,574.00 Cr'],
+    ['28 Oct', 'SKI2610014 · INV-88411', '1,181.00 Cr'],
+    ['24 Oct', 'FWD2610031 · INV-88412', '918.00 Cr'],
+    ['21 Oct', 'SKI2610022 · INV-88413', '656.00 Cr'],
+  ],
+}
+
+function LedgerSummaryPage() {
+  const { state } = useAppState()
+  const showToast = useToast()
+  const [accounts, setAccounts] = useState(initialLedgerAccounts)
+  const [selectedCode, setSelectedCode] = useState('4300')
+  const [query, setQuery] = useState('')
+  const [groupFilter, setGroupFilter] = useState<'all' | LedgerGroup>('all')
+  const [jobFilter, setJobFilter] = useState('all')
+  const [forFilter, setForFilter] = useState('all')
+  const [period, setPeriod] = useState('2026-10')
+  const [expandedGroups, setExpandedGroups] = useState<Set<LedgerGroup>>(() => new Set(ledgerGroups))
+  const [groupsOpen, setGroupsOpen] = useState(false)
+  const [newLedgerOpen, setNewLedgerOpen] = useState(false)
+  const [newLedger, setNewLedger] = useState({ code: '', name: '', group: 'Income' as LedgerGroup })
+  const [detailMode, setDetailMode] = useState<'summary' | 'ledger' | 'jobs' | 'edit'>('summary')
+  const selected = accounts.find((account) => account.code === selectedCode) ?? accounts[0]
+  const jobOptions = [...new Set(accounts.flatMap((account) => account.jobs))].sort()
+  const forOptions = [...new Set(accounts.map((account) => account.forTag))].sort()
+  const debitTotal = accounts.reduce((sum, account) => sum + account.debit, 0)
+  const creditTotal = accounts.reduce((sum, account) => sum + account.credit, 0)
+  const filteredAccounts = accounts.filter((account) => {
+    const text = `${account.code} ${account.name} ${account.jobs.join(' ')} ${account.forTag}`.toLowerCase()
+    return text.includes(query.toLowerCase())
+      && (groupFilter === 'all' || account.group === groupFilter)
+      && (jobFilter === 'all' || account.jobs.includes(jobFilter))
+      && (forFilter === 'all' || account.forTag === forFilter)
+  })
+  const addLedger = () => {
+    const code = newLedger.code.trim()
+    const name = newLedger.name.trim()
+    if (!code || !name) {
+      showToast('Enter both a ledger code and name.')
+      return
+    }
+    if (accounts.some((account) => account.code.toLowerCase() === code.toLowerCase())) {
+      showToast(`Ledger code ${code} already exists.`)
+      return
+    }
+    const subgroup = newLedger.group === 'Assets' ? 'Current Assets'
+      : newLedger.group === 'Liabilities' ? 'Current Liabilities'
+        : newLedger.group === 'Equity' ? 'Capital'
+          : newLedger.group === 'Income' ? 'Operating Income' : 'Operating Expenses'
+    setAccounts((current) => [...current, { code, name, group: newLedger.group, subgroup, debit: 0, credit: 0, forTag: 'General', jobs: [] }])
+    setExpandedGroups((current) => new Set(current).add(newLedger.group))
+    setSelectedCode(code)
+    setNewLedger({ code: '', name: '', group: 'Income' })
+    setNewLedgerOpen(false)
+    setDetailMode('summary')
+    showToast(`Ledger ${code} created with a zero balance.`)
+  }
+  const exportLedgers = () => {
+    const rows = [
+      ['Code', 'Ledger name', 'Group', 'Group name', 'Debit (RM)', 'Credit (RM)', 'Job references', 'For'],
+      ...filteredAccounts.map((account) => [account.code, account.name, account.group, account.subgroup, account.debit.toFixed(2), account.credit.toFixed(2), account.jobs.join('; '), account.forTag]),
+    ]
+    const csv = rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `ledger-summary-${period}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+  const toggleGroup = (group: LedgerGroup) => setExpandedGroups((current) => {
+    const next = new Set(current)
+    if (next.has(group)) next.delete(group)
+    else next.add(group)
+    return next
+  })
+  const selectedJobs = selected?.jobs.map((jobNumber) => state.jobs.find((job) => job.jobNumber === jobNumber)).filter((job) => job !== undefined) ?? []
+  const postings = ledgerPostings[selected?.code ?? ''] ?? selectedJobs.slice(0, 4).map((job, index) => [
+    `${30 - index * 2} Oct`,
+    `${job.jobNumber} · ${selected?.code}-INV-${88410 + index}`,
+    `${(1250 - index * 115).toLocaleString('en-MY', { minimumFractionDigits: 2 })} ${selected?.credit ? 'Cr' : 'Dr'}`,
+  ] as [string, string, string])
+
+  return <>
+    <PageHeader eyebrow="Accounting · Ledgers" title="Account details · all jobs" description={`All ledgers grouped by ledger group · ${new Date(`${period}-01T00:00:00Z`).toLocaleDateString('en-MY', { month: 'long', year: 'numeric', timeZone: 'UTC' })} · MYR`} actions={<><Button variant="secondary" onClick={() => setGroupsOpen((open) => !open)}>{groupsOpen ? 'Hide groups' : 'Manage groups'}</Button><Button variant="secondary" onClick={exportLedgers}>Export</Button><Button className="ledger-primary-action" onClick={() => setNewLedgerOpen((open) => !open)}>＋ New ledger</Button></>} />
+    <section className="ledger-summary-strip" aria-label="Ledger balance summary">
+      <div><small>Ledgers · groups</small><strong>{accounts.length} · 7</strong></div>
+      <div><small>Total debit</small><strong>{money(debitTotal)}</strong></div>
+      <div><small>Total credit</small><strong>{money(creditTotal)}</strong></div>
+      <div><small>Difference</small><strong>{money(Math.abs(debitTotal - creditTotal))} <StatusBadge tone={debitTotal === creditTotal ? 'success' : 'warning'}>{debitTotal === creditTotal ? 'Balanced' : 'Out of balance'}</StatusBadge></strong></div>
+    </section>
+    {groupsOpen && <Card className="ledger-groups-panel"><div className="section-heading"><div><p className="eyebrow">Chart of accounts</p><h2>Ledger groups</h2></div><StatusBadge tone="info">7 groups</StatusBadge></div><div className="ledger-group-chips">{[['Assets', 'Current Assets · Fixed Assets'], ['Liabilities', 'Current Liabilities'], ['Equity', 'Capital'], ['Income', 'Operating Income'], ['Expenses', 'Operating Expenses']].map(([group, children]) => <div key={group}><strong>{group}</strong><span>{children}</span></div>)}</div></Card>}
+    {newLedgerOpen && <Card className="ledger-create-panel"><div className="section-heading"><div><p className="eyebrow">Chart of accounts</p><h2>Create ledger</h2></div><Button variant="ghost" onClick={() => setNewLedgerOpen(false)}>Close</Button></div><div className="form-grid form-grid--three"><FormField label="Ledger code"><input value={newLedger.code} onChange={(event) => setNewLedger((current) => ({ ...current, code: event.target.value }))} placeholder="e.g. 4500" /></FormField><FormField label="Ledger name"><input value={newLedger.name} onChange={(event) => setNewLedger((current) => ({ ...current, name: event.target.value }))} placeholder="Account name" /></FormField><FormField label="Ledger group"><select value={newLedger.group} onChange={(event) => setNewLedger((current) => ({ ...current, group: event.target.value as LedgerGroup }))}>{ledgerGroups.map((group) => <option key={group}>{group}</option>)}</select></FormField></div><div className="form-actions"><Button variant="secondary" onClick={() => setNewLedgerOpen(false)}>Cancel</Button><Button className="ledger-primary-action" onClick={addLedger}>Create ledger</Button></div></Card>}
+    <div className="ledger-workspace">
+      <Card className="ledger-table-card">
+        <div className="ledger-filters">
+          <FormField label="Search ledger"><input onChange={(event) => setQuery(event.target.value)} placeholder="Ledger name or code" value={query} /></FormField>
+          <FormField label="Ledger group"><select onChange={(event) => setGroupFilter(event.target.value as 'all' | LedgerGroup)} value={groupFilter}><option value="all">All groups</option>{ledgerGroups.map((group) => <option key={group}>{group}</option>)}</select></FormField>
+          <FormField label="Job"><select onChange={(event) => setJobFilter(event.target.value)} value={jobFilter}><option value="all">All jobs</option>{jobOptions.map((job) => <option key={job}>{job}</option>)}</select></FormField>
+          <FormField label="For"><select onChange={(event) => setForFilter(event.target.value)} value={forFilter}><option value="all">All</option>{forOptions.map((tag) => <option key={tag}>{tag}</option>)}</select></FormField>
+          <FormField label="Period"><input onChange={(event) => setPeriod(event.target.value)} type="month" value={period} /></FormField>
+          <div className="ledger-expand-actions"><Button variant="secondary" onClick={() => setExpandedGroups(new Set(ledgerGroups))}>Expand all</Button><Button variant="secondary" onClick={() => setExpandedGroups(new Set())}>Collapse all</Button></div>
+        </div>
+        <div className="table-scroll ledger-table-scroll"><table className="ledger-table">
+          <thead><tr><th>Ledger name</th><th>Group name</th><th>Job reference</th><th>Debit (RM)</th><th>Credit (RM)</th><th aria-label="Actions" /></tr></thead>
+          <tbody>{ledgerGroups.filter((group) => groupFilter === 'all' || groupFilter === group).map((group) => {
+            const groupAccounts = filteredAccounts.filter((account) => account.group === group)
+            if (!groupAccounts.length) return null
+            const groupDebit = groupAccounts.reduce((sum, account) => sum + account.debit, 0)
+            const groupCredit = groupAccounts.reduce((sum, account) => sum + account.credit, 0)
+            const subgroupNames = [...new Set(groupAccounts.map((account) => account.subgroup))]
+            return <LedgerGroupRows key={group} group={group} accounts={groupAccounts} subgroupNames={subgroupNames} expanded={expandedGroups.has(group)} debit={groupDebit} credit={groupCredit} selectedCode={selectedCode} onToggle={() => toggleGroup(group)} onSelect={(code) => { setSelectedCode(code); setDetailMode('summary') }} />
+          })}</tbody>
+        </table>{filteredAccounts.length === 0 && <p className="ledger-empty-state">No ledgers match the selected filters.</p>}</div>
+      </Card>
+      {selected && <Card className="ledger-detail-card">
+        <div className="ledger-detail-heading"><div><p className="eyebrow">Ledger detail · {selected.code}</p><h2>{selected.name}</h2></div><Button variant="ghost" aria-label="Close ledger detail" onClick={() => setDetailMode('summary')}>×</Button></div>
+        {detailMode === 'summary' && <>
+          <div className="ledger-detail-summary"><div><small>Group path</small><strong>{selected.group} › {selected.subgroup}</strong></div><div><small>Normal balance</small><strong>{selected.credit > 0 ? 'Credit' : 'Debit'}</strong></div><div><small>Jobs posted</small><strong>{selected.jobs.length || 0}</strong></div><div><small>Closing balance</small><strong>{money(selected.debit || selected.credit)} {selected.credit > 0 ? 'Cr' : 'Dr'}</strong></div></div>
+          <div className="ledger-postings"><p className="eyebrow">Recent postings by job</p>{postings.length ? <table><thead><tr><th>Date</th><th>Job · reference</th><th>Amount</th></tr></thead><tbody>{postings.map(([date, reference, amount]) => <tr key={`${date}-${reference}`}><td>{date}</td><td>{reference}</td><td>{amount}</td></tr>)}</tbody></table> : <p className="card-copy">No job postings are recorded for this ledger.</p>}</div>
+          <div className="ledger-detail-actions"><Button className="ledger-primary-action" onClick={() => setDetailMode('ledger')}>Open full ledger</Button><Button variant="secondary" onClick={() => setDetailMode('jobs')}>Job-wise breakup</Button><Button variant="secondary" onClick={() => setDetailMode('edit')}>Edit ledger</Button></div>
+        </>}
+        {detailMode === 'ledger' && <div className="ledger-detail-view"><div className="section-heading"><div><p className="eyebrow">Account activity</p><h3>Full ledger · {period}</h3></div><Button variant="ghost" onClick={() => setDetailMode('summary')}>Back</Button></div><p className="card-copy">Opening balance · RM 129,871.00 Cr</p><table><thead><tr><th>Date</th><th>Reference</th><th>Debit</th><th>Credit</th></tr></thead><tbody>{postings.map(([date, reference, amount]) => <tr key={`${date}-${reference}`}><td>{date}</td><td>{reference}</td><td>—</td><td>{amount}</td></tr>)}</tbody></table><div className="ledger-detail-total"><span>Closing balance</span><strong>{money(selected.credit)} Cr</strong></div></div>}
+        {detailMode === 'jobs' && <div className="ledger-detail-view"><div className="section-heading"><div><p className="eyebrow">Job analysis</p><h3>Job-wise breakup</h3></div><Button variant="ghost" onClick={() => setDetailMode('summary')}>Back</Button></div><DataTable headers={['Job Number', 'Customer', 'Amount']} rows={selected.jobs.map((jobNumber, index) => [jobNumber, state.jobs.find((job) => job.jobNumber === jobNumber) ? state.customers.find((customer) => customer.id === state.jobs.find((job) => job.jobNumber === jobNumber)?.customerId)?.name ?? 'Demo customer' : 'Demo customer', postings[index]?.[2] ?? '—'])} /></div>}
+        {detailMode === 'edit' && <LedgerEditForm account={selected} onCancel={() => setDetailMode('summary')} onSave={(updated) => {
+          if (accounts.some((account) => account.code.toLowerCase() === updated.code.toLowerCase() && account.code !== selected.code)) {
+            showToast(`Ledger code ${updated.code} already exists.`)
+            return
+          }
+          setAccounts((current) => current.map((account) => account.code === selected.code ? updated : account))
+          setSelectedCode(updated.code)
+          setDetailMode('summary')
+          showToast(`Ledger ${updated.code} updated.`)
+        }} />}
+      </Card>}
+    </div>
+    {/* <p className="ledger-demo-note">Demo ledger summary for presentation only. Account balances and job postings are illustrative mock data.</p> */}
+  </>
+}
+
+function LedgerGroupRows({ group, accounts, subgroupNames, expanded, debit, credit, selectedCode, onToggle, onSelect }: {
+  group: LedgerGroup
+  accounts: LedgerAccount[]
+  subgroupNames: string[]
+  expanded: boolean
+  debit: number
+  credit: number
+  selectedCode: string
+  onToggle: () => void
+  onSelect: (code: string) => void
+}) {
+  return <>
+    <tr className={`ledger-primary-group ledger-primary-group--${ledgerGroupTone[group]}`}><td colSpan={2}><button aria-expanded={expanded} onClick={onToggle} type="button">{expanded ? '−' : '+'} {group}</button></td><td>Primary group</td><td>{debit ? ledgerMoney(debit) : 'RM —'}</td><td>{credit ? ledgerMoney(credit) : 'RM —'}</td><td /></tr>
+    {expanded && subgroupNames.map((subgroup) => {
+      const subgroupAccounts = accounts.filter((account) => account.subgroup === subgroup)
+      const subgroupDebit = subgroupAccounts.reduce((sum, account) => sum + account.debit, 0)
+      const subgroupCredit = subgroupAccounts.reduce((sum, account) => sum + account.credit, 0)
+      return <Fragment key={subgroup}>
+        <tr className="ledger-subgroup"><td colSpan={2}>› {subgroup}</td><td>{subgroupAccounts.length} ledgers</td><td>{subgroupDebit ? ledgerMoney(subgroupDebit) : 'RM —'}</td><td>{subgroupCredit ? ledgerMoney(subgroupCredit) : 'RM —'}</td><td /></tr>
+        {subgroupAccounts.map((account) => <tr className={account.code === selectedCode ? 'ledger-account-row ledger-account-row--selected' : 'ledger-account-row'} key={account.code}>
+          <td><button className="ledger-account-name" onClick={() => onSelect(account.code)} type="button"><strong>{account.code} {account.name}</strong><StatusBadge tone="neutral">{subgroup}</StatusBadge></button></td>
+          <td>{account.subgroup}</td><td><span className="ledger-job-refs">{account.jobs.length ? `${account.jobs[0]}${account.jobs.length > 1 ? ` +${account.jobs.length - 1} more` : ''}` : 'No job'}<small>For: {account.forTag}</small></span></td>
+          <td>{account.debit ? ledgerMoney(account.debit) : '—'}</td><td>{account.credit ? ledgerMoney(account.credit) : '—'}</td>
+          <td><Button variant="ghost" onClick={() => onSelect(account.code)}>Details</Button></td>
+        </tr>)}
+      </Fragment>
+    })}
+  </>
+}
+
+function LedgerEditForm({ account, onCancel, onSave }: { account: LedgerAccount; onCancel: () => void; onSave: (account: LedgerAccount) => void }) {
+  const [code, setCode] = useState(account.code)
+  const [name, setName] = useState(account.name)
+  return <div className="ledger-edit-form">
+    <p className="eyebrow">Edit ledger</p>
+    <FormField label="Ledger code"><input value={code} onChange={(event) => setCode(event.target.value)} /></FormField>
+    <FormField label="Ledger name"><input value={name} onChange={(event) => setName(event.target.value)} /></FormField>
+    <div className="form-actions"><Button variant="secondary" onClick={onCancel}>Cancel</Button><Button className="ledger-primary-action" disabled={!code.trim() || !name.trim()} onClick={() => onSave({ ...account, code: code.trim(), name: name.trim() })}>Save changes</Button></div>
+  </div>
+}
+
 function StatementsPage() {
   const { state } = useAppState()
   const report = calculateFinancialStatements(state)
@@ -232,7 +461,7 @@ function ExpensesWorkspace() {
   return <><div className="billing-tabs"><Button variant={tab === 'invoices' ? 'primary' : 'secondary'} onClick={() => setTab('invoices')}>Supplier invoices</Button><Button variant={tab === 'costs' ? 'primary' : 'secondary'} onClick={() => setTab('costs')}>Supplier costs</Button><Button variant={tab === 'reimbursements' ? 'primary' : 'secondary'} onClick={() => setTab('reimbursements')}>Reimbursements</Button></div>{tab === 'invoices' ? <SupplierInvoicesPage /> : tab === 'costs' ? <CostsPage /> : <ReimbursementsPage />}</>
 }
 
-export function FinancialManagement({ kind }: { kind: 'costs' | 'invoices' | 'expenses' | 'vouchers' | 'reimbursements' | 'reconciliation' | 'job-costing' | 'statements' | 'assumptions' }) {
+export function FinancialManagement({ kind }: { kind: 'costs' | 'invoices' | 'expenses' | 'vouchers' | 'reimbursements' | 'reconciliation' | 'job-costing' | 'ledger-summary' | 'statements' | 'assumptions' }) {
   if (kind === 'costs') return <CostsPage />
   if (kind === 'invoices') return <SupplierInvoicesPage />
   if (kind === 'expenses') return <ExpensesWorkspace />
@@ -240,6 +469,7 @@ export function FinancialManagement({ kind }: { kind: 'costs' | 'invoices' | 'ex
   if (kind === 'reimbursements') return <ReimbursementsPage />
   if (kind === 'reconciliation') return <ReconciliationPage />
   if (kind === 'job-costing') return <JobCostingPage />
+  if (kind === 'ledger-summary') return <LedgerSummaryPage />
   if (kind === 'assumptions') return <AssumptionsPage />
   return <StatementsPage />
 }
