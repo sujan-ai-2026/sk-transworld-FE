@@ -515,11 +515,11 @@ function JobDetail({ job, onBack, navigate }: { job: Job; onBack: () => void; na
       eyebrow="Job detail"
       title={job.jobNumber}
       description={`${customer?.name ?? 'Unknown customer'} · ${job.serviceType} · opened ${job.openedDate}`}
-      actions={<>
+      actions={<div className="job-detail-actions">
         <Button variant="secondary" onClick={onBack}>Back to jobs</Button>
         {job.status !== 'completed' && <Button onClick={() => void updateStatus('completed')}>Close job</Button>}
         {job.status !== 'cancelled' && <Button variant="danger" onClick={() => void updateStatus('cancelled')}>Cancel</Button>}
-      </>}
+      </div>}
     />
     <div className="detail-tabs">
       {tabs.map((item) => <button className={tab === item ? 'detail-tab detail-tab--active' : 'detail-tab'} key={item} onClick={() => setTab(item)} type="button">{item}</button>)}
