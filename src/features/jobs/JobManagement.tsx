@@ -47,32 +47,38 @@ function AiExtraction({ onApply }: { onApply: (profile: ShipmentExtraction) => v
 
 function WarehouseOutboundMockup({ jobNumber, customerName }: { jobNumber: string; customerName: string }) {
   const [activeStep, setActiveStep] = useState(0)
+  const [pickedPendingLine, setPickedPendingLine] = useState(false)
+  const [packingAdded, setPackingAdded] = useState(false)
+  const [gatePassIssued, setGatePassIssued] = useState(false)
+  const [dispatchConfirmed, setDispatchConfirmed] = useState(false)
+  const showToast = useToast()
+  const confirm = useConfirmation()
   const steps = [
-    { label: 'Picking', status: 'In progress · 340 / 420 ctn' },
-    { label: 'Packing', status: 'In progress · 3 / 4 pallets' },
-    { label: 'Gate pass', status: 'Awaiting security check' },
-    { label: 'Dispatch', status: 'In transit · POD pending' },
+    { label: 'Picking', status: `In progress · ${pickedPendingLine ? 400 : 340} / 420 ctn` },
+    { label: 'Packing', status: packingAdded ? 'Complete · 4 / 4 pallets' : 'In progress · 3 / 4 pallets' },
+    { label: 'Gate pass', status: gatePassIssued ? 'Issued · security approved' : 'Awaiting security check' },
+    { label: 'Dispatch', status: dispatchConfirmed ? 'Dispatched · POD pending' : 'In transit · POD pending' },
   ]
   const pickLines = [
     { sku: 'MF-CN-1201', description: 'Coconut milk 400 ml × 24', location: 'A-03-02-B', lot: 'L2609A · 2027-09', ordered: '120 ctn', picked: '120', status: 'Picked' },
     { sku: 'MF-RN-0450', description: 'Rice noodles 500 g × 20', location: 'B-01-04-A', lot: 'L2608C · 2027-03', ordered: '80 ctn', picked: '80', status: 'Picked' },
     { sku: 'MF-SC-0310', description: 'Soy sauce 1 L × 12', location: 'A-05-01-C', lot: 'L2609F · 2028-01', ordered: '60 ctn', picked: '60', status: 'Picked' },
     { sku: 'MF-FR-0702', description: 'Frozen dumplings 1 kg × 10 · chilled', location: 'C-02-03-A', lot: 'Cold room · L2610B · 2027-04', ordered: '100 ctn', picked: '80', status: 'Short' },
-    { sku: 'MF-TE-0115', description: 'Jasmine tea 100 bags × 36', location: 'B-03-02-B', lot: 'L2607D · 2028-06', ordered: '60 ctn', picked: '0', status: 'Pending' },
+    { sku: 'MF-TE-0115', description: 'Jasmine tea 100 bags × 36', location: 'B-03-02-B', lot: 'L2607D · 2028-06', ordered: '60 ctn', picked: pickedPendingLine ? '60' : '0', status: pickedPendingLine ? 'Picked' : 'Pending' },
   ]
   const packageCards = [
     { name: 'PLT-01', status: 'Sealed', contents: ['MF-CN-1201 · Coconut milk · 120 ctn'], dimensions: '120 × 100 × 150 cm', sscc: '0 9551234 000000101 7' },
     { name: 'PLT-02', status: 'Sealed', contents: ['MF-RN-0450 · Rice noodles · 80 ctn', 'MF-TE-0115 · Jasmine tea · 60 ctn'], dimensions: '120 × 100 × 160 cm', sscc: '0 9551234 000000102 4' },
     { name: 'PLT-03', status: 'Sealed', contents: ['MF-SC-0310 · Soy sauce · 60 ctn'], dimensions: '120 × 100 × 110 cm', sscc: '0 9551234 000000103 1' },
-    { name: 'PLT-04 · chilled', status: 'Building', contents: ['MF-FR-0702 · Frozen dumplings · 56 / 80 ctn'], dimensions: 'Keep at −18 °C · reefer required', sscc: 'SSCC assigned on seal' },
+    { name: 'PLT-04 · chilled', status: packingAdded ? 'Sealed' : 'Building', contents: [`MF-FR-0702 · Frozen dumplings · ${packingAdded ? '80' : '56'} / 80 ctn`], dimensions: 'Keep at −18 °C · reefer required', sscc: packingAdded ? '0 9551234 000000104 8' : 'SSCC assigned on seal' },
   ]
   const documents = ['Delivery order OB-2610028', 'Packing list PK-2610028-01', 'Gate pass GP-2610028-01', 'Pallet labels (4)', 'Proof of delivery']
   const dispatchEvents = [
     ['Picking confirmed', '30 Oct 10:52 · 400 / 420 ctn · 20 short (line 4)', 'complete'],
     ['Packing completed', '30 Oct 12:20 · 4 pallets sealed, labels printed', 'complete'],
-    ['Gate pass issued', '30 Oct 13:55 · supervisor + security approved', 'complete'],
-    ['Gate-out scanned', '30 Oct 14:06 · Gate 2 · seal GP-2610028', 'complete'],
-    ['In transit', 'Reefer −18 °C · driver app tracking', 'current'],
+    ['Gate pass issued', gatePassIssued ? '30 Oct 13:55 · supervisor + security approved' : 'Awaiting security inspection', gatePassIssued ? 'complete' : 'pending'],
+    ['Gate-out scanned', dispatchConfirmed ? '30 Oct 14:06 · Gate 2 · seal GP-2610028' : 'Pending gate-out scan', dispatchConfirmed ? 'complete' : 'pending'],
+    [dispatchConfirmed ? 'Dispatched' : 'In transit', dispatchConfirmed ? 'Reefer −18 °C · driver app tracking started' : 'Reefer −18 °C · awaiting dispatch confirmation', dispatchConfirmed ? 'current' : 'pending'],
     ['Delivered · POD', 'Awaiting signed POD from consignee', 'pending'],
   ]
   const jobRef = jobNumber
@@ -101,7 +107,7 @@ function WarehouseOutboundMockup({ jobNumber, customerName }: { jobNumber: strin
     {activeStep === 0 && <div className="warehouse-outbound-layout">
       <div className="warehouse-outbound-list">
         <div className="warehouse-outbound-panel-header"><strong>PICK LINES</strong><span>5 lines · allocation FEFO</span></div>
-        <div className="warehouse-outbound-progress-row"><StatusBadge tone="info">3 picked</StatusBadge><StatusBadge tone="warning">1 short</StatusBadge><StatusBadge tone="neutral">1 pending</StatusBadge></div>
+        <div className="warehouse-outbound-progress-row"><StatusBadge tone="info">{pickedPendingLine ? '4 picked' : '3 picked'}</StatusBadge><StatusBadge tone="warning">1 short</StatusBadge><StatusBadge tone={pickedPendingLine ? 'success' : 'neutral'}>{pickedPendingLine ? '0 pending' : '1 pending'}</StatusBadge></div>
         <div className="table-scroll"><table className="warehouse-outbound-table">
           <thead><tr><th>#</th><th>SKU / description</th><th>Location</th><th>Lot · expiry</th><th>Ordered</th><th>Picked</th><th>Status</th></tr></thead>
           <tbody>{pickLines.map((line, index) => <tr key={line.sku}>
@@ -109,7 +115,8 @@ function WarehouseOutboundMockup({ jobNumber, customerName }: { jobNumber: strin
             <td><StatusBadge tone={line.status === 'Picked' ? 'success' : line.status === 'Short' ? 'warning' : 'neutral'}>{line.status}</StatusBadge></td>
           </tr>)}</tbody>
         </table></div>
-        <p className="warehouse-outbound-note">Picked 340 of 420 cartons · Unit of measure: carton · Stock is reserved at allocation and deducted on confirm.</p>
+        <p className="warehouse-outbound-note">Picked {pickedPendingLine ? 400 : 340} of 420 cartons · Unit of measure: carton · Stock is reserved at allocation and deducted on confirm.</p>
+        <div className="warehouse-outbound-action"><Button disabled={pickedPendingLine} onClick={() => { setPickedPendingLine(true); showToast('Picking recorded for 60 cartons of MF-TE-0115.') }}>{pickedPendingLine ? 'Picking Added' : 'Add Picking'}</Button></div>
       </div>
       <div className="warehouse-outbound-sidebar">
         <div className="warehouse-outbound-callout">
@@ -132,7 +139,8 @@ function WarehouseOutboundMockup({ jobNumber, customerName }: { jobNumber: strin
           {pack.contents.map((content) => <p key={content}>{content}</p>)}
           <small>{pack.dimensions} · weight recorded</small>
         </article>)}</div>
-        <div className="warehouse-outbound-summary"><span>Packed vs picked<strong>376 / 400 ctn</strong></span><span>Gross weight<strong>1,240 kg</strong></span><span>Volume<strong>5.8 m³</strong></span><span>Labels printed<strong>3 of 4</strong></span></div>
+        <div className="warehouse-outbound-summary"><span>Packed vs picked<strong>{packingAdded ? '400 / 400' : '376 / 400'} ctn</strong></span><span>Gross weight<strong>1,240 kg</strong></span><span>Volume<strong>5.8 m³</strong></span><span>Labels printed<strong>{packingAdded ? '4 of 4' : '3 of 4'}</strong></span></div>
+        <div className="warehouse-outbound-action"><Button disabled={packingAdded} onClick={() => { setPackingAdded(true); showToast('Packing completed and pallet labels were assigned.') }}>{packingAdded ? 'Packing Added' : 'Add Packing'}</Button></div>
       </div>
       <div className="warehouse-outbound-sidebar">
         <div className="warehouse-outbound-callout">
@@ -150,23 +158,29 @@ function WarehouseOutboundMockup({ jobNumber, customerName }: { jobNumber: strin
         <div className="warehouse-gate-fields">{[['Haulier', 'Klang Valley Transport'], ['Vehicle no.', 'VBC 2184'], ['Vehicle type', '10-ton reefer lorry'], ['Driver name', 'Mohd Firdaus'], ['Driver ID / licence', 'D-10482 · GDL valid'], ['Seal no.', 'Enter seal number'], ['Deliver to', 'Meridian Foods, Shah Alam'], ['Reefer set point', '−18 °C'], ['Planned gate-out', '30 Oct · 14:00']].map(([label, value]) => <div className="warehouse-gate-field" key={label}><small>{label}</small><strong>{value}</strong></div>)}</div>
         <div className="warehouse-gate-bottom">
           <div className="warehouse-outbound-checklist"><p className="eyebrow">Security checklist</p><ul><li>✓ Delivery order & packing list match</li><li>✓ Pallet count verified (4 / 4)</li><li>○ Seal number matches gate pass</li><li>○ Reefer temperature reading recorded</li><li>○ Vehicle & driver ID inspected</li></ul></div>
-          <div className="warehouse-outbound-checklist"><p className="eyebrow">Approvals</p><ul><li><strong>Warehouse supervisor</strong><small>A. Rahman · Approved 12:40</small></li><li><strong>Security officer</strong><small>Pending inspection</small></li></ul></div>
+          <div className="warehouse-outbound-checklist"><p className="eyebrow">Approvals</p><ul><li><strong>Warehouse supervisor</strong><small>A. Rahman · Approved 12:40</small></li><li><strong>Security officer</strong><small>{gatePassIssued ? 'Inspection approved 13:55' : 'Pending inspection'}</small></li></ul></div>
         </div>
       </div>
       <aside className="warehouse-gate-preview">
         <div className="warehouse-gate-preview__heading"><div><p className="eyebrow">Gate pass preview</p><h3>GP-2610028-01</h3></div><span aria-label="QR code mockup">▦</span></div>
-        <dl><div><dt>Job</dt><dd>{jobRef}</dd></div><div><dt>Outbound order</dt><dd>OB-2610028</dd></div><div><dt>Customer</dt><dd>{customerName}</dd></div><div><dt>Packages</dt><dd>4 pallets · 400 ctn</dd></div><div><dt>Vehicle</dt><dd>VBC 2184</dd></div><div><dt>Seal</dt><dd>Pending</dd></div><div><dt>Valid until</dt><dd>30 Oct · 18:00</dd></div></dl>
+        <dl><div><dt>Job</dt><dd>{jobRef}</dd></div><div><dt>Outbound order</dt><dd>OB-2610028</dd></div><div><dt>Customer</dt><dd>{customerName}</dd></div><div><dt>Packages</dt><dd>4 pallets · 400 ctn</dd></div><div><dt>Vehicle</dt><dd>VBC 2184</dd></div><div><dt>Seal</dt><dd>{gatePassIssued ? 'SEAL-261030-04' : 'Pending'}</dd></div><div><dt>Valid until</dt><dd>30 Oct · 18:00</dd></div></dl>
         <p>Security scans the QR at Gate 2 to record gate-out and start dispatch.</p>
+        <div className="warehouse-outbound-action"><Button disabled={!packingAdded || gatePassIssued} onClick={() => { setGatePassIssued(true); showToast('Demo gate pass GP-2610028-01 issued and security approved.') }}>{gatePassIssued ? 'Gate pass issued' : 'Get gatepass'}</Button></div>
       </aside>
     </div>}
     {activeStep === 3 && <div className="warehouse-dispatch-layout">
-      <div className="warehouse-dispatch-stats">{[['Gate-out', '30 Oct · 14:06'], ['Vehicle', 'VBC 2184'], ['Driver', 'Mohd Firdaus'], ['Packages', '4 pallets · 400 ctn'], ['ETA Shah Alam', '30 Oct · 15:30']].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div>
+      <div className="warehouse-dispatch-stats">{[['Gate-out', dispatchConfirmed ? '30 Oct · 14:06' : 'Awaiting confirmation'], ['Vehicle', 'VBC 2184'], ['Driver', 'Mohd Firdaus'], ['Packages', '4 pallets · 400 ctn'], ['ETA Shah Alam', '30 Oct · 15:30']].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div>
       <div className="warehouse-dispatch-columns">
         <section className="warehouse-outbound-checklist"><p className="eyebrow">Outbound timeline</p><ol className="warehouse-dispatch-timeline">{dispatchEvents.map(([title, detail, status]) => <li className={`warehouse-dispatch-event warehouse-dispatch-event--${status}`} key={title}><span aria-hidden="true" /><div><strong>{title}</strong><small>{detail}</small></div></li>)}</ol></section>
         <section className="warehouse-outbound-checklist"><p className="eyebrow">Documents</p><ul>{documents.map((document, index) => <li key={document}><span>{document}</span><StatusBadge tone={index === documents.length - 1 ? 'warning' : 'success'}>{index === documents.length - 1 ? 'Pending' : 'Available'}</StatusBadge></li>)}</ul></section>
         <section className="warehouse-outbound-checklist warehouse-dispatch-charges"><p className="eyebrow">Charges to job {jobRef}</p><p className="card-copy">Generated on dispatch; posted to the job cost centre as unbilled until invoiced.</p><ul><li><span>Outbound handling · 400 ctn</span><strong>RM 240</strong></li><li><span>Pallet & wrap · 4</span><strong>RM 120</strong></li><li><span>Chilled handling surcharge</span><strong>RM 80</strong></li><li><span>Local delivery (reefer)</span><strong>RM 450</strong></li></ul><div className="warehouse-outbound-total"><span>Unbilled total</span><strong>RM 890</strong></div></section>
       </div>
+      <div className="warehouse-outbound-action"><Button disabled={!gatePassIssued || dispatchConfirmed} onClick={async () => {
+        const accepted = await confirm({ title: 'Confirm dispatch?', message: `Confirm demo dispatch for ${jobRef} on vehicle VBC 2184? This illustrative action does not post a live transport record.`, confirmLabel: 'Confirm Dispatch', variant: 'warning', warningIcon: true }, async () => undefined)
+        if (accepted) { setDispatchConfirmed(true); showToast('Demo dispatch confirmed. POD is pending.') }
+      }}>{dispatchConfirmed ? 'Dispatch confirmed · POD pending' : 'Confirm Dispatch'}</Button></div>
     </div>}
+    <p className="warehouse-outbound-note warehouse-outbound-demo-note">These step actions update the illustrative screen only; use the Warehouse outbound workflow to create and post shared operational records.</p>
   </Card>
 }
 

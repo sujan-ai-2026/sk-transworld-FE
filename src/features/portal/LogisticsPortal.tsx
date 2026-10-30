@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { getNavigationItem, logisticsNavigation, portalLinks } from '../../app/navigation.ts'
 import { calculateDashboardKpis, calculateInvoiceTotals, calculateJobFinancials, calculateQuotationTotals, deriveAlerts } from '../../domain/calculations.ts'
 import type { ActivityEvent, Customer, Quotation, QuotationLine, QuotationRequest, ServiceType, Supplier } from '../../domain/types.ts'
@@ -17,6 +17,7 @@ import { AlertsPage, AssumptionsPage, ReportsPage } from '../insights/Insights.t
 import { DemoWalkthrough } from './DemoWalkthrough.tsx'
 
 const serviceOptions: ServiceType[] = ['freight', 'customs', 'haulage', 'warehouse', 'other']
+const quickLinkPaths = ['/app/dashboard', '/app/jobs', '/app/containers', '/app/warehouse', '/app/billing']
 const toneForStatus = (status: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' =>
   status === 'accepted' || status === 'approved' || status === 'active' ? 'success' : status === 'rejected' || status === 'inactive' ? 'danger' : status === 'sent' || status === 'quoted' || status === 'in-progress' ? 'info' : 'warning'
 const nextId = (prefix: string, count: number) => `${prefix}-${String(count + 1).padStart(4, '0')}`
@@ -24,6 +25,80 @@ const addDays = (date: string, days: number) => {
   const result = new Date(`${date}T00:00:00Z`)
   result.setUTCDate(result.getUTCDate() + days)
   return result.toISOString().slice(0, 10)
+}
+
+function QuickLinks({ pathname, navigate }: { pathname: string; navigate: (path: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const links = quickLinkPaths
+    .map((path) => logisticsNavigation.find((item) => item.path === path))
+    .filter((item): item is (typeof logisticsNavigation)[number] => Boolean(item))
+
+  useEffect(() => {
+    if (!open) return
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !containerRef.current?.contains(event.target)) setOpen(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  return <div
+    className={`quick-links${open ? ' quick-links--open' : ''}`}
+    onMouseEnter={() => setOpen(true)}
+    onMouseLeave={() => setOpen(false)}
+    onFocus={() => setOpen(true)}
+    onBlur={(event) => {
+      if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) setOpen(false)
+    }}
+    ref={containerRef}
+  >
+    <button
+      aria-expanded={open}
+      aria-haspopup="true"
+      className="quick-links__trigger"
+      onClick={() => setOpen((current) => !current)}
+      ref={triggerRef}
+      type="button"
+    >
+      <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+        <path d="M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v6H4zM14 15h6v6h-6z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+      </svg>
+      <span>Quick links</span>
+      <span aria-hidden="true" className="quick-links__chevron">⌄</span>
+    </button>
+    {open && <div aria-label="Quick links" className="quick-links__panel">
+      <div className="quick-links__heading">
+        <div><p className="eyebrow">Jump to a module</p><strong>Quick links</strong></div>
+        <span>{links.length} shortcuts</span>
+      </div>
+      <div className="quick-links__groups">
+        <section className="quick-links__group" aria-label="Important modules">
+          {links.map((link) => <button
+            aria-current={pathname === link.path ? 'page' : undefined}
+            className={pathname === link.path ? 'quick-links__item quick-links__item--active' : 'quick-links__item'}
+            key={link.path}
+            onClick={() => { setOpen(false); navigate(link.path) }}
+            type="button"
+          >
+            <span className="quick-links__item-icon" aria-hidden="true">{link.label.slice(0, 1)}</span>
+            <span><strong>{link.label}</strong><small>{link.description}</small></span>
+          </button>)}
+        </section>
+      </div>
+    </div>}
+  </div>
 }
 
 function Dashboard({ navigate }: { navigate: (path: string) => void }) {
@@ -357,7 +432,7 @@ export function LogisticsPortal({ pathname, navigate, selectedJobId, selectedTri
 
   return <div className={`portal-shell${sidebarCollapsed ? ' portal-shell--collapsed' : ''}`}><aside className={`sidebar${mobileOpen ? ' sidebar--open' : ''}`}><div className="sidebar-brand"><img src="/sk-logo.png" alt="SK Transworld Logo" className="brand-mark" />
   </div><div className="demo-pill"><span /> </div><nav className="sidebar-nav" aria-label="Logistics portal navigation">{['Overview', 'Master data', 'Commercial', 'Operations', 'Finance', 'Insights', 'Administration'].map((group) => { const items = filtered.filter((item) => item.group === group); const isCollapsed = collapsedGroups.has(group); const groupId = `nav-group-${group.toLowerCase().replaceAll(' ', '-')}`; return items.length ? <div className="nav-group" key={group}><button aria-controls={groupId} aria-expanded={!isCollapsed} className="nav-group-toggle" onClick={() => setCollapsedGroups((previous) => { const next = new Set(previous); if (next.has(group)) next.delete(group); else next.add(group); return next })} type="button"><span>{group}</span><svg aria-hidden="true" className={isCollapsed ? '' : 'nav-group-chevron--expanded'} width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="m4 6 4 4 4-4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" /></svg></button><div className="nav-group-items" hidden={isCollapsed && !sidebarCollapsed} id={groupId}>{items.map((item) => <button aria-label={item.label} className={item.path === pathname ? 'nav-item nav-item--active' : 'nav-item'} key={item.path} onClick={() => { navigate(item.path); setMobileOpen(false) }} title={item.label} type="button"><span className="nav-icon" aria-hidden="true"><NavIcon label={item.label} /></span><span className="nav-label">{item.label}</span></button>)}</div></div> : null })}</nav><div className="sidebar-footer"><button className="portal-switch" onClick={() => navigate(portalLinks[0].path)} title="Customer Portal" type="button"><span>↗</span><div><strong>Customer Portal</strong><small>Open demo view</small></div></button><button className="portal-switch" onClick={() => navigate(portalLinks[1].path)} title="Driver App" type="button"><span>▣</span><div><strong>Driver App</strong><small>Open mobile view</small></div></button></div></aside>{mobileOpen && <button className="mobile-backdrop" onClick={() => setMobileOpen(false)} aria-label="Close navigation" type="button" />}<main className="main-column"><header className="topbar"><button className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation" type="button">☰</button><div className="breadcrumb"><span>Logistics Portal</span><b>/</b><strong>{current.label}</strong></div>
-  <div className="topbar-actions"><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label="Global search" onChange={(event) => setSearch(event.target.value)} placeholder="Search modules..." value={search} /></label><DemoWalkthrough navigate={navigate} /><button className="icon-button" aria-label={`Notifications: ${activeAlerts.length} active`} onClick={() => navigate('/app/alerts')} type="button">
+  <div className="topbar-actions"><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label="Global search" onChange={(event) => setSearch(event.target.value)} placeholder="Search modules..." value={search} /></label><QuickLinks pathname={pathname} navigate={navigate} /><DemoWalkthrough navigate={navigate} /><button className="icon-button" aria-label={`Notifications: ${activeAlerts.length} active`} onClick={() => navigate('/app/alerts')} type="button">
   <span className="alert-icon-wrap">
     <svg className="alert-bell-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>

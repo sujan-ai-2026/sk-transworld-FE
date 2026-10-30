@@ -302,7 +302,7 @@ function LedgerSummaryPage() {
   ] as [string, string, string])
 
   return <>
-    <PageHeader eyebrow="Accounting · Ledgers" title="Account details · all jobs" description={`All ledgers grouped by ledger group · ${new Date(`${period}-01T00:00:00Z`).toLocaleDateString('en-MY', { month: 'long', year: 'numeric', timeZone: 'UTC' })} · MYR`} actions={<><Button variant="secondary" onClick={() => setGroupsOpen((open) => !open)}>{groupsOpen ? 'Hide groups' : 'Manage groups'}</Button><Button variant="secondary" onClick={exportLedgers}>Export</Button><Button className="ledger-primary-action" onClick={() => setNewLedgerOpen((open) => !open)}>＋ New ledger</Button></>} />
+    <PageHeader eyebrow="Accounting · Ledgers" title="Account details" description={`All ledgers grouped by ledger group · ${new Date(`${period}-01T00:00:00Z`).toLocaleDateString('en-MY', { month: 'long', year: 'numeric', timeZone: 'UTC' })} · MYR`} actions={<><Button variant="secondary" onClick={() => setGroupsOpen((open) => !open)}>{groupsOpen ? 'Hide groups' : 'Manage groups'}</Button><Button variant="secondary" onClick={exportLedgers}>Export</Button><Button className="ledger-primary-action" onClick={() => setNewLedgerOpen((open) => !open)}>＋ New ledger</Button></>} />
     <section className="ledger-summary-strip" aria-label="Ledger balance summary">
       <div><small>Ledgers · groups</small><strong>{accounts.length} · 7</strong></div>
       <div><small>Total debit</small><strong>{money(debitTotal)}</strong></div>
